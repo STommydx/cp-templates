@@ -8,6 +8,7 @@ import (
 	"path"
 
 	"github.com/STommydx/cp-templates/tools/ccli/spinner"
+	"github.com/go-git/go-git/v5"
 )
 
 type Settings struct {
@@ -52,6 +53,25 @@ func Run(settings Settings) error {
 			}(); err != nil {
 				return err
 			}
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+	if err := spinner.Run("Initialize git repository", func() error {
+		repo, err := git.PlainInit(settings.Directory, false)
+		if err != nil {
+			return fmt.Errorf("failed to initialize git repository: %w", err)
+		}
+		worktree, err := repo.Worktree()
+		if err != nil {
+			return fmt.Errorf("failed to get worktree of git repository: %w", err)
+		}
+		if _, err := worktree.Add("."); err != nil {
+			return fmt.Errorf("failed to add files to git repository: %w", err)
+		}
+		if _, err := worktree.Commit("initial commit", &git.CommitOptions{}); err != nil {
+			return fmt.Errorf("failed to commit files to git repository: %w", err)
 		}
 		return nil
 	}); err != nil {
