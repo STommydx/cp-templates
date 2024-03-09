@@ -39,7 +39,7 @@ func Run(settings Settings) error {
 					return fmt.Errorf("failed to open template file: %w", err)
 				}
 				defer templateFile.Close()
-				filename := fmt.Sprintf("%s.cpp", string(64+i))
+				filename := fmt.Sprintf("%c.cpp", rune(64+i))
 				file, err := os.Create(path.Join(settings.Directory, filename))
 				if err != nil {
 					return fmt.Errorf("failed to create file: %w", err)
