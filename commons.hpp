@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 #include <queue>
+#include <limits>
 
 /**
  * Abbreviations for common types.
