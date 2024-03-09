@@ -10,9 +10,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install Catch2 for Testing
-      run: sudo apt install catch2
-
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build
 
