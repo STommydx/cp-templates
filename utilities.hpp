@@ -9,6 +9,8 @@
 #include <functional>
 #include <vector>
 #include <numeric>
+#include <algorithm>
+#include <ranges>
 
 /**
  * prefix_sum is a data structure that can answer range sum queries in O(1) time.
