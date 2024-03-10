@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"path"
 
 	"github.com/STommydx/cp-templates/tools/ccli/submission"
@@ -14,7 +15,7 @@ import (
 var outputPath string
 
 var packCmd = &cobra.Command{
-	Use:   "pack source...",
+	Use:   "pack [-o output] source...",
 	Short: "Pack source files into a single file for online judge submissions",
 	Long:  `Pack source files into a single file for online judge submissions.`,
 	Args:  cobra.MinimumNArgs(1),
@@ -28,6 +29,7 @@ var packCmd = &cobra.Command{
 			OutputPath:  outputPath,
 		}); err != nil {
 			fmt.Println(err)
+			os.Exit(1)
 		}
 	},
 }
