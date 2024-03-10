@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/STommydx/cp-templates/tools/ccli/repoinit"
 	"github.com/spf13/cobra"
@@ -25,7 +26,8 @@ var initCmd = &cobra.Command{
 			NumberOfMainPrograms:  mainProgramCount,
 			TemplateRepositoryUrl: templateRepository,
 		}); err != nil {
-			fmt.Println(err)
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
 		}
 	},
 }

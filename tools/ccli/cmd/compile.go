@@ -31,7 +31,7 @@ This command compiles source files to binary. This also packs source files into 
 			SourceFiles: args,
 			OutputPath:  submissionPath,
 		}); err != nil {
-			fmt.Println(err)
+			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 		if outputPath == "" {
@@ -43,7 +43,7 @@ This command compiles source files to binary. This also packs source files into 
 			OutputPath:       outputPath,
 			CompilationFlags: strings.Split(compilationFlags, " "),
 		}); err != nil {
-			fmt.Println(err)
+			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 	},
