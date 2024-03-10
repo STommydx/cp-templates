@@ -10,6 +10,8 @@
 #include <vector>
 #include <queue>
 #include <limits>
+#include <ranges>
+#include <iostream>
 
 /**
  * Abbreviations for common types.
@@ -40,5 +42,57 @@ template <> constexpr ll INFTY<ll> = 0x3f3f3f3f3f3f3f3fLL;
 template <class T, class U> constexpr std::pair<T, U> INFTY<std::pair<T, U>>{INFTY<T>, INFTY<U>};
 constexpr int INF = INFTY<>;
 constexpr ll BINF = INFTY<ll>;
+
+/**
+ * IO helper functions.
+ */
+template <std::ranges::input_range R>
+std::ostream &print_range(std::ostream &os, R &&r, char delimiter = ' ');
+template <class T, std::size_t... Is>
+std::ostream &print_tuple(std::ostream &os, const T &t, std::index_sequence<Is...>);
+
+template <class T>
+std::ostream &operator<<(std::ostream &os, const std::vector<T> &r) {
+    return print_range(os, r);
+}
+template <class T>
+std::ostream &operator<<(std::ostream &os, const std::deque<T> &r) {
+    return print_range(os, r);
+}
+template <class T>
+std::ostream &operator<<(std::ostream &os, const std::vector<std::vector<T>> &r) {
+    return print_range(os, r, '\n');
+}
+template <class T1, class T2>
+std::ostream &operator<<(std::ostream &os, const std::vector<std::pair<T1, T2>> &r) {
+    return print_range(os, r, '\n');
+}
+template <class... Ts>
+std::ostream &operator<<(std::ostream &os, const std::vector<std::tuple<Ts...>> &r) {
+    return print_range(os, r, '\n');
+}
+template <class T1, class T2>
+std::ostream &operator<<(std::ostream &os, const std::pair<T1, T2> &p) {
+    return os << p.first << ' ' << p.second;
+}
+template <class... Ts>
+std::ostream &operator<<(std::ostream &os, const std::tuple<Ts...> &t) {
+    return print_tuple(os, t, std::index_sequence_for<Ts...>{});
+}
+
+template <std::ranges::input_range R>
+std::ostream &print_range(std::ostream &os, R &&r, char delimiter) {
+    for (auto it = std::ranges::begin(r); it != std::ranges::end(r); ++it) {
+        if (it != std::ranges::begin(r)) os << delimiter;
+        os << *it;
+    }
+    return os;
+}
+
+template <class T, std::size_t... Is>
+std::ostream &print_tuple(std::ostream &os, const T &t, std::index_sequence<Is...>) {
+    (..., (Is > 0 && (os << ' '), os << std::get<Is>(t)));
+    return os;
+}
 
 #endif

@@ -58,3 +58,42 @@ TEST_CASE("infinity constant is defined properly", "[commons]") {
         REQUIRE(double_ll_inf > BINF);
     }
 }
+
+TEST_CASE("IO operator overload works for common cp types", "[commons]") {
+    SECTION("vector outputs elements separated by space") {
+        std::stringstream ss;
+        std::vector<std::string> v{"1", "22", "333"};
+        ss << v;
+        REQUIRE(ss.str() == "1 22 333");
+    }
+    SECTION("2D vector outputs elements separated by space and newline") {
+        std::stringstream ss;
+        std::vector<std::vector<std::string>> v{{"1", "22", "333"}, {"4444", "55555", "666666"}};
+        ss << v;
+        REQUIRE(ss.str() == "1 22 333\n4444 55555 666666");
+    }
+    SECTION("pair outputs elements separated by space") {
+        std::stringstream ss;
+        std::pair<std::string, int> p{"1", 22};
+        ss << p;
+        REQUIRE(ss.str() == "1 22");
+    }
+    SECTION("tuple outputs elements separated by space") {
+        std::stringstream ss;
+        std::tuple<std::string, int, double> t{"1", 22, 3.3};
+        ss << t;
+        REQUIRE(ss.str() == "1 22 3.3");
+    }
+    SECTION("vector of pairs outputs elements separated by space and newline") {
+        std::stringstream ss;
+        std::vector<std::pair<std::string, int>> v{{"1", 22}, {"4444", 55555}, {"666666", 7777777}};
+        ss << v;
+        REQUIRE(ss.str() == "1 22\n4444 55555\n666666 7777777");
+    }
+    SECTION("vector of tuples outputs elements separated by space and newline") {
+        std::stringstream ss;
+        std::vector<std::tuple<std::string, int, double>> v{{"1", 22, 3.3}, {"4444", 55555, 6.6}, {"666666", 7777777, 8.8}};
+        ss << v;
+        REQUIRE(ss.str() == "1 22 3.3\n4444 55555 6.6\n666666 7777777 8.8");
+    }
+}
