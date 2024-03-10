@@ -2,6 +2,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <sstream>
+
 TEST_CASE("abbreviations are defined", "[commons]") {
     SECTION("long long datatype") {
         ll x = 1LL << 40;
