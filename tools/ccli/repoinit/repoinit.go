@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path"
 
 	"github.com/STommydx/cp-templates/tools/ccli/spinner"
@@ -70,8 +71,32 @@ func Run(settings Settings) error {
 		if _, err := worktree.Add("."); err != nil {
 			return fmt.Errorf("failed to add files to git repository: %w", err)
 		}
-		if _, err := worktree.Commit("initial commit", &git.CommitOptions{}); err != nil {
-			return fmt.Errorf("failed to commit files to git repository: %w", err)
+		if _, err := worktree.Commit("feat: initial repository with main templates", &git.CommitOptions{}); err != nil {
+			return fmt.Errorf("failed to commit main files to git repository: %w", err)
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+	if err := spinner.Run("Download templates", func() error {
+		addSubModuleCmd := exec.Command("git", "submodule", "add", settings.TemplateRepositoryUrl, "templates")
+		addSubModuleCmd.Dir = settings.Directory
+		if err := addSubModuleCmd.Run(); err != nil {
+			return fmt.Errorf("failed to add submodule to git repository: %w", err)
+		}
+		repo, err := git.PlainOpen(settings.Directory)
+		if err != nil {
+			return fmt.Errorf("failed to open git repository: %w", err)
+		}
+		worktree, err := repo.Worktree()
+		if err != nil {
+			return fmt.Errorf("failed to get worktree of git repository: %w", err)
+		}
+		if _, err := worktree.Add("."); err != nil {
+			return fmt.Errorf("failed to add files to git repository: %w", err)
+		}
+		if _, err := worktree.Commit("feat: add templates submodule", &git.CommitOptions{}); err != nil {
+			return fmt.Errorf("failed to commit template files to git repository: %w", err)
 		}
 		return nil
 	}); err != nil {
