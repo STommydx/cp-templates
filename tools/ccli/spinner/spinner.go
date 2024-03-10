@@ -2,12 +2,18 @@ package spinner
 
 import (
 	"fmt"
+	"github.com/mattn/go-isatty"
+	"os"
 	"time"
 
 	"github.com/theckman/yacspin"
 )
 
 func Run(message string, f func() error) error {
+	if !isatty.IsTerminal(os.Stderr.Fd()) {
+		return f()
+	}
+
 	spinnerConfig := yacspin.Config{
 		Frequency:         100 * time.Millisecond,
 		CharSet:           yacspin.CharSets[11],
@@ -22,6 +28,7 @@ func Run(message string, f func() error) error {
 		StopFailCharacter: "✗",
 		StopFailColors:    []string{"fgRed"},
 		StopFailMessage:   message,
+		Writer:            os.Stderr,
 	}
 
 	spinner, err := yacspin.New(spinnerConfig)
