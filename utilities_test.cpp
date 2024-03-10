@@ -43,10 +43,18 @@ TEST_CASE("compression_vector projections", "[utilities]") {
     std::vector<int> a{2, 4, 3, 5, 8, 3, 5, 5, 4};
     std::vector<int> p{1, 0, 2, 4, 3, 5, 6, 7, 8};
     auto a_indexer = [&](int idx) { return a[idx]; };
-    compression_vector<int, std::ranges::less, std::ranges::equal_to, decltype(a_indexer)> v(p, {}, {}, a_indexer);
-    v.compress();
-    REQUIRE(v.size() == 5);
-    REQUIRE(v[4] == 4);
+    SECTION("projection works correctly") {
+        compression_vector<int, std::ranges::less, std::ranges::equal_to, decltype(a_indexer)> v(p, {}, {}, a_indexer);
+        v.compress();
+        REQUIRE(v.size() == 5);
+        REQUIRE(v[4] == 4);
+    }
+    SECTION("CTAD works correctly") {
+        compression_vector v(p, std::ranges::less{}, std::ranges::equal_to{}, a_indexer);
+        v.compress();
+        REQUIRE(v.size() == 5);
+        REQUIRE(v[4] == 4);
+    }
 }
 
 TEST_CASE("compression_vector constructors", "[utilities]") {
