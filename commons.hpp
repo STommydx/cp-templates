@@ -6,12 +6,12 @@
 #ifndef COMMONS_HPP
 #define COMMONS_HPP
 
+#include <iostream>
+#include <limits>
+#include <queue>
+#include <ranges>
 #include <utility>
 #include <vector>
-#include <queue>
-#include <limits>
-#include <ranges>
-#include <iostream>
 
 /**
  * Abbreviations for common types.
@@ -31,15 +31,20 @@ using vpll = std::vector<pll>;
 /**
  * Abbreviation for the STL priority_queue with smaller element at the top.
  */
-template <class T> using min_queue = std::priority_queue<T, std::vector<T>, std::greater<T>>;
+template <class T>
+using min_queue = std::priority_queue<T, std::vector<T>, std::greater<T>>;
 
 /**
  * Abbreviation for infinity constant.
  */
-template <class T = int> constexpr T INFTY = std::numeric_limits<T>::has_infinity ? std::numeric_limits<T>::infinity() : std::numeric_limits<T>::max();
+template <class T = int>
+constexpr T INFTY =
+    std::numeric_limits<T>::has_infinity ? std::numeric_limits<T>::infinity()
+                                         : std::numeric_limits<T>::max();
 template <> constexpr int INFTY<int> = 0x3f3f3f3f;
 template <> constexpr ll INFTY<ll> = 0x3f3f3f3f3f3f3f3fLL;
-template <class T, class U> constexpr std::pair<T, U> INFTY<std::pair<T, U>>{INFTY<T>, INFTY<U>};
+template <class T, class U>
+constexpr std::pair<T, U> INFTY<std::pair<T, U>>{INFTY<T>, INFTY<U>};
 constexpr int INF = INFTY<>;
 constexpr ll BINF = INFTY<ll>;
 
@@ -49,50 +54,56 @@ constexpr ll BINF = INFTY<ll>;
 template <std::ranges::input_range R>
 std::ostream &print_range(std::ostream &os, R &&r, char delimiter = ' ');
 template <class T, std::size_t... Is>
-std::ostream &print_tuple(std::ostream &os, const T &t, std::index_sequence<Is...>);
+std::ostream &print_tuple(std::ostream &os, const T &t,
+                          std::index_sequence<Is...>);
 
 template <class T>
 std::ostream &operator<<(std::ostream &os, const std::vector<T> &r) {
-    return print_range(os, r);
+	return print_range(os, r);
 }
 template <class T>
 std::ostream &operator<<(std::ostream &os, const std::deque<T> &r) {
-    return print_range(os, r);
+	return print_range(os, r);
 }
 template <class T>
-std::ostream &operator<<(std::ostream &os, const std::vector<std::vector<T>> &r) {
-    return print_range(os, r, '\n');
+std::ostream &operator<<(std::ostream &os,
+                         const std::vector<std::vector<T>> &r) {
+	return print_range(os, r, '\n');
 }
 template <class T1, class T2>
-std::ostream &operator<<(std::ostream &os, const std::vector<std::pair<T1, T2>> &r) {
-    return print_range(os, r, '\n');
+std::ostream &operator<<(std::ostream &os,
+                         const std::vector<std::pair<T1, T2>> &r) {
+	return print_range(os, r, '\n');
 }
 template <class... Ts>
-std::ostream &operator<<(std::ostream &os, const std::vector<std::tuple<Ts...>> &r) {
-    return print_range(os, r, '\n');
+std::ostream &operator<<(std::ostream &os,
+                         const std::vector<std::tuple<Ts...>> &r) {
+	return print_range(os, r, '\n');
 }
 template <class T1, class T2>
 std::ostream &operator<<(std::ostream &os, const std::pair<T1, T2> &p) {
-    return os << p.first << ' ' << p.second;
+	return os << p.first << ' ' << p.second;
 }
 template <class... Ts>
 std::ostream &operator<<(std::ostream &os, const std::tuple<Ts...> &t) {
-    return print_tuple(os, t, std::index_sequence_for<Ts...>{});
+	return print_tuple(os, t, std::index_sequence_for<Ts...>{});
 }
 
 template <std::ranges::input_range R>
 std::ostream &print_range(std::ostream &os, R &&r, char delimiter) {
-    for (auto it = std::ranges::begin(r); it != std::ranges::end(r); ++it) {
-        if (it != std::ranges::begin(r)) os << delimiter;
-        os << *it;
-    }
-    return os;
+	for (auto it = std::ranges::begin(r); it != std::ranges::end(r); ++it) {
+		if (it != std::ranges::begin(r))
+			os << delimiter;
+		os << *it;
+	}
+	return os;
 }
 
 template <class T, std::size_t... Is>
-std::ostream &print_tuple(std::ostream &os, const T &t, std::index_sequence<Is...>) {
-    (..., (Is > 0 && (os << ' '), os << std::get<Is>(t)));
-    return os;
+std::ostream &print_tuple(std::ostream &os, const T &t,
+                          std::index_sequence<Is...>) {
+	(..., (Is > 0 && (os << ' '), os << std::get<Is>(t)));
+	return os;
 }
 
 template <class T, std::size_t... Is>
@@ -100,27 +111,29 @@ std::istream &read_tuple(std::istream &is, T &t, std::index_sequence<Is...>);
 
 template <class T>
 std::istream &operator>>(std::istream &is, std::vector<T> &r) {
-    for (auto &x : r) is >> x;
-    return is;
+	for (auto &x : r)
+		is >> x;
+	return is;
 }
 template <class T>
 std::istream &operator>>(std::istream &is, std::deque<T> &r) {
-    for (auto &x : r) is >> x;
-    return is;
+	for (auto &x : r)
+		is >> x;
+	return is;
 }
 template <class T1, class T2>
 std::istream &operator>>(std::istream &is, std::pair<T1, T2> &x) {
-    return is >> x.first >> x.second;
+	return is >> x.first >> x.second;
 }
 template <class... Ts>
 std::istream &operator>>(std::istream &is, std::tuple<Ts...> &t) {
-    return read_tuple(is, t, std::index_sequence_for<Ts...>{});
+	return read_tuple(is, t, std::index_sequence_for<Ts...>{});
 }
 
 template <class T, std::size_t... Is>
 std::istream &read_tuple(std::istream &is, T &t, std::index_sequence<Is...>) {
-    (is >> ... >> std::get<Is>(t));
-    return is;
+	(is >> ... >> std::get<Is>(t));
+	return is;
 }
 
 #endif
