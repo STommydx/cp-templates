@@ -70,6 +70,9 @@ public:
         : std::vector<T>(count), sort_compare(sort_compare), unique_compare(unique_compare), proj(proj) {}
     explicit compression_vector(size_t count, const T &value, SortCompare sort_compare = {}, UniqueCompare unique_compare = {}, Proj proj = {})
         : std::vector<T>(count, value), sort_compare(sort_compare), unique_compare(unique_compare), proj(proj) {}
+    template <class Iter>
+    explicit compression_vector(Iter first, Iter last, SortCompare sort_compare = {}, UniqueCompare unique_compare = {}, Proj proj = {})
+        : std::vector<T>(first, last), sort_compare(sort_compare), unique_compare(unique_compare), proj(proj) {}
 
     void compress() {
         std::ranges::sort(*this, sort_compare, proj);
@@ -102,5 +105,7 @@ public:
         return {std::ranges::distance(std::ranges::begin(*this), l), std::ranges::distance(std::ranges::begin(*this), r)};
     }
 };
+template <class Iter, class SortCompare, class UniqueCompare, class Proj>
+compression_vector(Iter, Iter, SortCompare, UniqueCompare, Proj) -> compression_vector<std::iter_value_t<Iter>, SortCompare, UniqueCompare, Proj>;
 
 #endif

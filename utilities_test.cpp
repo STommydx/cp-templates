@@ -54,6 +54,10 @@ TEST_CASE("compression_vector projections", "[utilities]") {
         v.compress();
         REQUIRE(v.size() == 5);
         REQUIRE(v[4] == 4);
+        compression_vector v2(p.begin(), p.end(), std::ranges::less{}, std::ranges::equal_to{}, a_indexer);
+        v2.compress();
+        REQUIRE(v2.size() == 5);
+        REQUIRE(v2[4] == 4);
     }
 }
 
