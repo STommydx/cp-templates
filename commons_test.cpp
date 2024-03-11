@@ -68,11 +68,23 @@ TEST_CASE("IO operator overload works for common cp types", "[commons]") {
         ss << v;
         REQUIRE(ss.str() == "1 22 333");
     }
+    SECTION("vector inputs elements separated by space") {
+        std::stringstream ss{"1 22 333"};
+        std::vector<std::string> v(3);
+        ss >> v;
+        REQUIRE(v == std::vector<std::string>({"1", "22", "333"}));
+    }
     SECTION("2D vector outputs elements separated by space and newline") {
         std::stringstream ss;
         std::vector<std::vector<std::string>> v{{"1", "22", "333"}, {"4444", "55555", "666666"}};
         ss << v;
         REQUIRE(ss.str() == "1 22 333\n4444 55555 666666");
+    }
+    SECTION("2D vector inputs elements separated by space and newline") {
+        std::stringstream ss{"1 22 333\n4444 55555 666666"};
+        std::vector<std::vector<std::string>> v(2, std::vector<std::string>(3));
+        ss >> v;
+        REQUIRE(v == std::vector<std::vector<std::string>>({{"1", "22", "333"}, {"4444", "55555", "666666"}}));
     }
     SECTION("pair outputs elements separated by space") {
         std::stringstream ss;
@@ -80,11 +92,25 @@ TEST_CASE("IO operator overload works for common cp types", "[commons]") {
         ss << p;
         REQUIRE(ss.str() == "1 22");
     }
+    SECTION("pair inputs elements separated by space") {
+        std::stringstream ss{"1 22"};
+        std::pair<std::string, int> p;
+        ss >> p;
+        REQUIRE(p == std::pair<std::string, int>({"1", 22}));
+    }
     SECTION("tuple outputs elements separated by space") {
         std::stringstream ss;
         std::tuple<std::string, int, double> t{"1", 22, 3.3};
         ss << t;
         REQUIRE(ss.str() == "1 22 3.3");
+    }
+    SECTION("tuple inputs elements separated by space") {
+        std::stringstream ss{"1 22 3.3"};
+        std::tuple<std::string, int, double> t;
+        ss >> t;
+        REQUIRE(std::get<0>(t) == "1");
+        REQUIRE(std::get<1>(t) == 22);
+        REQUIRE(std::get<2>(t) == 3.3);
     }
     SECTION("vector of pairs outputs elements separated by space and newline") {
         std::stringstream ss;

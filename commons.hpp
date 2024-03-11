@@ -95,4 +95,32 @@ std::ostream &print_tuple(std::ostream &os, const T &t, std::index_sequence<Is..
     return os;
 }
 
+template <class T, std::size_t... Is>
+std::istream &read_tuple(std::istream &is, T &t, std::index_sequence<Is...>);
+
+template <class T>
+std::istream &operator>>(std::istream &is, std::vector<T> &r) {
+    for (auto &x : r) is >> x;
+    return is;
+}
+template <class T>
+std::istream &operator>>(std::istream &is, std::deque<T> &r) {
+    for (auto &x : r) is >> x;
+    return is;
+}
+template <class T1, class T2>
+std::istream &operator>>(std::istream &is, std::pair<T1, T2> &x) {
+    return is >> x.first >> x.second;
+}
+template <class... Ts>
+std::istream &operator>>(std::istream &is, std::tuple<Ts...> &t) {
+    return read_tuple(is, t, std::index_sequence_for<Ts...>{});
+}
+
+template <class T, std::size_t... Is>
+std::istream &read_tuple(std::istream &is, T &t, std::index_sequence<Is...>) {
+    (is >> ... >> std::get<Is>(t));
+    return is;
+}
+
 #endif
