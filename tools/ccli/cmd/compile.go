@@ -1,15 +1,13 @@
-/*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
 	"fmt"
-	"github.com/STommydx/cp-templates/tools/ccli/submission"
-	"github.com/spf13/cobra"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/STommydx/cp-templates/tools/ccli/submission"
+	"github.com/spf13/cobra"
 )
 
 var compilationFlags string
