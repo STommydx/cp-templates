@@ -3,13 +3,14 @@ package submission
 import (
 	"bytes"
 	"fmt"
-	"github.com/STommydx/cp-templates/tools/ccli/spinner"
-	"github.com/fatih/color"
-	"github.com/mattn/go-isatty"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/STommydx/cp-templates/tools/ccli/spinner"
+	"github.com/fatih/color"
+	"github.com/mattn/go-isatty"
 )
 
 type CompileSettings struct {
@@ -31,20 +32,9 @@ func Compile(settings CompileSettings) error {
 	}); err != nil {
 		return err
 	}
-	isUpdateToDate := true
-	outputStat, err := os.Stat(settings.OutputPath)
-	if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed to stat output file: %w", err)
-	}
-	for _, sourceFilePath := range settings.SourceFiles {
-		sourceFileStat, err := os.Stat(sourceFilePath)
-		if err != nil {
-			return fmt.Errorf("failed to stat source file: %w", err)
-		}
-		if sourceFileStat.ModTime().After(outputStat.ModTime()) {
-			isUpdateToDate = false
-			break
-		}
+	isUpdateToDate, err := isUpToDate(settings.OutputPath, settings.SourceFiles)
+	if err != nil {
+		return err
 	}
 	if isUpdateToDate {
 		if isatty.IsTerminal(os.Stderr.Fd()) {

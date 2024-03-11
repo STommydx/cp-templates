@@ -3,12 +3,13 @@ package submission
 import (
 	"bufio"
 	"fmt"
-	"github.com/fatih/color"
-	"github.com/mattn/go-isatty"
 	"io"
 	"os"
 	"path/filepath"
 	"regexp"
+
+	"github.com/fatih/color"
+	"github.com/mattn/go-isatty"
 
 	"github.com/STommydx/cp-templates/tools/ccli/spinner"
 )
@@ -31,20 +32,9 @@ func Pack(settings PackSettings) error {
 	}); err != nil {
 		return err
 	}
-	isUpdateToDate := true
-	outputStat, err := os.Stat(settings.OutputPath)
-	if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed to stat output file: %w", err)
-	}
-	for _, sourceFilePath := range settings.SourceFiles {
-		sourceFileStat, err := os.Stat(sourceFilePath)
-		if err != nil {
-			return fmt.Errorf("failed to stat source file: %w", err)
-		}
-		if sourceFileStat.ModTime().After(outputStat.ModTime()) {
-			isUpdateToDate = false
-			break
-		}
+	isUpdateToDate, err := isUpToDate(settings.OutputPath, settings.SourceFiles)
+	if err != nil {
+		return err
 	}
 	if isUpdateToDate {
 		if isatty.IsTerminal(os.Stderr.Fd()) {
@@ -94,4 +84,24 @@ func Pack(settings PackSettings) error {
 		return nil
 	}
 	return nil
+}
+
+func isUpToDate(outputPath string, sourceFiles []string) (bool, error) {
+	outputStat, err := os.Stat(outputPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to stat output file: %w", err)
+	}
+	for _, sourceFilePath := range sourceFiles {
+		sourceFileStat, err := os.Stat(sourceFilePath)
+		if err != nil {
+			return false, fmt.Errorf("failed to stat source file: %w", err)
+		}
+		if sourceFileStat.ModTime().After(outputStat.ModTime()) {
+			return false, nil
+		}
+	}
+	return true, nil
 }
