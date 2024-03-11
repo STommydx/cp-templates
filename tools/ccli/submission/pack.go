@@ -3,6 +3,8 @@ package submission
 import (
 	"bufio"
 	"fmt"
+	"github.com/fatih/color"
+	"github.com/mattn/go-isatty"
 	"io"
 	"os"
 	"path/filepath"
@@ -17,7 +19,7 @@ type PackSettings struct {
 }
 
 func Pack(settings PackSettings) error {
-	if err := spinner.Run("Create output directory", func() error {
+	if err := spinner.Run("Create submission directory", func() error {
 		outputDir := filepath.Dir(settings.OutputPath)
 		if _, err := os.Stat(outputDir); os.IsNotExist(err) {
 			err := os.Mkdir(outputDir, os.ModePerm)
@@ -28,6 +30,27 @@ func Pack(settings PackSettings) error {
 		return nil
 	}); err != nil {
 		return err
+	}
+	isUpdateToDate := true
+	outputStat, err := os.Stat(settings.OutputPath)
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to stat output file: %w", err)
+	}
+	for _, sourceFilePath := range settings.SourceFiles {
+		sourceFileStat, err := os.Stat(sourceFilePath)
+		if err != nil {
+			return fmt.Errorf("failed to stat source file: %w", err)
+		}
+		if sourceFileStat.ModTime().After(outputStat.ModTime()) {
+			isUpdateToDate = false
+			break
+		}
+	}
+	if isUpdateToDate {
+		if isatty.IsTerminal(os.Stderr.Fd()) {
+			color.New(color.FgYellow).Fprintln(os.Stderr, "⚠ Submission file is up-to-date, skipping packing")
+		}
+		return nil
 	}
 	if spinner.Run("Pack source files", func() error {
 		outputFile, err := os.Create(settings.OutputPath)

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/STommydx/cp-templates/tools/ccli/spinner"
+	"github.com/fatih/color"
 	"github.com/mattn/go-isatty"
 	"io"
 	"os"
@@ -29,6 +30,27 @@ func Compile(settings CompileSettings) error {
 		return nil
 	}); err != nil {
 		return err
+	}
+	isUpdateToDate := true
+	outputStat, err := os.Stat(settings.OutputPath)
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to stat output file: %w", err)
+	}
+	for _, sourceFilePath := range settings.SourceFiles {
+		sourceFileStat, err := os.Stat(sourceFilePath)
+		if err != nil {
+			return fmt.Errorf("failed to stat source file: %w", err)
+		}
+		if sourceFileStat.ModTime().After(outputStat.ModTime()) {
+			isUpdateToDate = false
+			break
+		}
+	}
+	if isUpdateToDate {
+		if isatty.IsTerminal(os.Stderr.Fd()) {
+			color.New(color.FgYellow).Fprintln(os.Stderr, "⚠ Executable is up-to-date, skipping compilation")
+		}
+		return nil
 	}
 	var stderrBuf bytes.Buffer
 	defer io.Copy(os.Stderr, &stderrBuf)
