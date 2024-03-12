@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <numeric>
 #include <ranges>
 
 namespace fn {
@@ -40,7 +41,49 @@ template <class Proj, class Comp> class minimum<void, Proj, Comp> {
 	}
 };
 template <class Comp, class Proj>
-minimum(Comp, Proj) -> minimum<void, std::identity, std::ranges::less>;
+minimum(Comp, Proj) -> minimum<void, Comp, Proj>;
+
+template <class T = void, class Proj = std::identity,
+          class Comp = std::ranges::less>
+class maximum {
+  private:
+	Comp comp;
+	Proj proj;
+
+  public:
+	constexpr maximum(Comp comp = {}, Proj proj = {})
+	    : comp(comp), proj(proj) {}
+	constexpr T operator()(const T &lhs, const T &rhs) const {
+		return std::ranges::max(lhs, rhs, comp, proj);
+	}
+};
+template <class Proj, class Comp> class maximum<void, Proj, Comp> {
+  private:
+	Comp comp;
+	Proj proj;
+
+  public:
+	constexpr maximum(Comp comp = {}, Proj proj = {})
+	    : comp(comp), proj(proj) {}
+	template <class T>
+	constexpr T operator()(const T &lhs, const T &rhs) const {
+		return std::ranges::max(lhs, rhs, comp, proj);
+	}
+};
+template <class Comp, class Proj>
+maximum(Comp, Proj) -> maximum<void, Comp, Proj>;
+
+template <class T = void> struct gcd {
+	constexpr T operator()(T lhs, T rhs) const { return std::gcd(lhs, rhs); }
+};
+template <> struct gcd<void> {
+	template <class T1, class T2>
+	constexpr auto operator()(T1 &&lhs, T2 &&rhs) const
+	    -> decltype(std::gcd(std::forward<T1>(lhs), std::forward<T2>(rhs))) {
+		return std::gcd(std::forward<T1>(lhs), std::forward<T2>(rhs));
+	}
+};
+
 } // namespace fn
 
 #endif
