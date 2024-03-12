@@ -7,6 +7,7 @@
 #ifndef FUNCTIONAL_HPP
 #define FUNCTIONAL_HPP
 
+#include <algorithm>
 #include <functional>
 #include <ranges>
 
