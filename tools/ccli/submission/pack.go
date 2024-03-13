@@ -3,7 +3,6 @@ package submission
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -51,32 +50,36 @@ func Pack(settings PackSettings) error {
 		writer := bufio.NewWriter(outputFile)
 		defer writer.Flush()
 		for _, sourceFilePath := range settings.SourceFiles {
-			sourceFile, err := os.Open(sourceFilePath)
-			if err != nil {
-				return fmt.Errorf("failed to open source file: %w", err)
-			}
-			defer sourceFile.Close()
-			sourceFileDir := filepath.Dir(sourceFilePath)
-			includeRegex := regexp.MustCompile(`^#include\s+"([^"]+)"$`)
-			scanner := bufio.NewScanner(sourceFile)
-			for scanner.Scan() {
-				if matches := includeRegex.FindStringSubmatch(scanner.Text()); matches != nil {
-					matchedFilePath := matches[1]
-					includedFile, err := os.Open(filepath.Join(sourceFileDir, matchedFilePath))
-					if err != nil {
-						return fmt.Errorf("failed to open included file %s: %w", matchedFilePath, err)
-					}
-					if _, err := io.Copy(writer, includedFile); err != nil {
-						return fmt.Errorf("failed to write included file %s: %w", matchedFilePath, err)
-					}
-				} else {
-					if _, err := writer.WriteString(scanner.Text()); err != nil {
-						return fmt.Errorf("failed to write to output file: %w", err)
-					}
-					if _, err := writer.WriteRune('\n'); err != nil {
-						return fmt.Errorf("failed to write to output file: %w", err)
+			var parseAndWriteSourceFile func(sourceFilePath string) error
+			parseAndWriteSourceFile = func(sourceFilePath string) error {
+				sourceFile, err := os.Open(sourceFilePath)
+				if err != nil {
+					return fmt.Errorf("failed to open source file: %w", err)
+				}
+				defer sourceFile.Close()
+				sourceFileDir := filepath.Dir(sourceFilePath)
+				includeRegex := regexp.MustCompile(`^#include\s+"([^"]+)"$`)
+				scanner := bufio.NewScanner(sourceFile)
+				for scanner.Scan() {
+					if matches := includeRegex.FindStringSubmatch(scanner.Text()); matches != nil {
+						matchedFilePath := matches[1]
+						includedFilePath := filepath.Join(sourceFileDir, matchedFilePath)
+						if err := parseAndWriteSourceFile(includedFilePath); err != nil {
+							return fmt.Errorf("failed to write included file %s: %w", matchedFilePath, err)
+						}
+					} else {
+						if _, err := writer.WriteString(scanner.Text()); err != nil {
+							return fmt.Errorf("failed to write to output file: %w", err)
+						}
+						if _, err := writer.WriteRune('\n'); err != nil {
+							return fmt.Errorf("failed to write to output file: %w", err)
+						}
 					}
 				}
+				return nil
+			}
+			if err := parseAndWriteSourceFile(sourceFilePath); err != nil {
+				return err
 			}
 		}
 		return nil
