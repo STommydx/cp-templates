@@ -94,7 +94,7 @@ TEST_CASE("segment_tree check order preserving: range leftmost query, point "
 	REQUIRE(st.query(1, 2) == 10);
 }
 
-TEST_CASE("lazy_segment_tree: range max query, point add update",
+TEST_CASE("lazy_segment_tree: range max query, range add update",
           "[segment_tree]") {
 	std::vector<int> v{3, 2, 8, 5};
 	lazy_segment_tree<int, int, fn::maximum<>> st(v);
@@ -105,4 +105,42 @@ TEST_CASE("lazy_segment_tree: range max query, point add update",
 	REQUIRE(st.query(1, 3) == 18);
 	REQUIRE(st.query(0, 0) == 3);
 	REQUIRE(st.query(0, 1) == 12);
+}
+
+TEST_CASE("lazy_segment_tree: range max query, range assign update",
+          "[segment_tree]") {
+	std::vector<int> v{3, 2, 8, 5};
+	lazy_segment_tree<int, int, fn::maximum<>, fn::assign> st(v);
+	REQUIRE(st.query(0, 1) == 3);
+	REQUIRE(st.query(1, 3) == 8);
+	REQUIRE(st.query(2, 3) == 8);
+	st.modify(1, 2, 10);
+	REQUIRE(st.query(1, 3) == 10);
+	REQUIRE(st.query(0, 0) == 3);
+	REQUIRE(st.query(0, 1) == 10);
+}
+
+TEST_CASE("lazy_segment_tree: range gcd query, range assign update",
+          "[segment_tree]") {
+	std::vector<int> v{5, 2, 8, 6};
+	lazy_segment_tree<int, int, fn::gcd<>, fn::assign> st(v);
+	REQUIRE(st.query(0, 1) == 1);
+	REQUIRE(st.query(1, 3) == 2);
+	REQUIRE(st.query(2, 3) == 2);
+	st.modify(1, 2, 10);
+	REQUIRE(st.query(1, 3) == 2);
+	REQUIRE(st.query(0, 0) == 5);
+	REQUIRE(st.query(0, 1) == 5);
+}
+
+TEST_CASE("lazy_segment_tree: range gcd query, range product update",
+          "[segment_tree]") {
+	std::vector<int> v{5, 2, 8, 6};
+	lazy_segment_tree<int, int, fn::gcd<>, std::multiplies<>> st(v);
+	REQUIRE(st.query(0, 1) == 1);
+	st.modify(1, 2, 5);
+	REQUIRE(st.query(1, 3) == 2);
+	REQUIRE(st.query(0, 0) == 5);
+	REQUIRE(st.query(0, 1) == 5);
+	REQUIRE(st.query(1, 2) == 10);
 }

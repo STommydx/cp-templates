@@ -10,6 +10,7 @@
 #define SEGMENT_TREE_HPP
 
 #include <algorithm>
+#include <bit>
 #include <functional>
 #include <optional>
 #include <vector>
@@ -105,16 +106,21 @@ class lazy_segment_tree {
 	}
 
   public:
-	explicit lazy_segment_tree(const std::vector<T> &init)
-	    : n(init.size()), h(0), tree(n), lazy(n + n) {
+	explicit lazy_segment_tree(const std::vector<T> &init,
+	                           CombineOp combinator = {}, UpdateOp updater = {},
+	                           CombineUpdateOp lazyCombinator = {})
+	    : n(init.size()), h(std::bit_width(n)), tree(n), lazy(n + n),
+	      combinator(combinator), updater(updater),
+	      lazyCombinator(lazyCombinator) {
 		copy(init.begin(), init.end(), back_inserter(tree));
-		while ((1 << h) <= n)
-			h++;
 		for (int i = n - 1; i > 0; i--)
 			tree[i] = combinator(tree[i << 1], tree[i << 1 | 1]);
 	}
-	explicit lazy_segment_tree(int n, const T &init = {})
-	    : lazy_segment_tree(std::vector<T>(n, init)) {}
+	explicit lazy_segment_tree(size_t n, const T &init = {},
+	                           CombineOp combinator = {}, UpdateOp updater = {},
+	                           CombineUpdateOp lazyCombinator = {})
+	    : lazy_segment_tree(std::vector<T>(n, init), combinator, updater,
+	                        lazyCombinator) {}
 
 	void modify(int l, int r, const U &val) {
 		push(l);
