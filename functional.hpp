@@ -91,6 +91,13 @@ struct assign {
 	}
 };
 
+struct noop {
+	template <class T1, class T2>
+	constexpr T1 &&operator()(T1 &&t, T2 &&) const noexcept {
+		return std::forward<T1>(t);
+	}
+};
+
 } // namespace fn
 
 #endif

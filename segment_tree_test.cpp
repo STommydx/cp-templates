@@ -68,7 +68,7 @@ TEST_CASE(
 	REQUIRE(st.query(1, 3) == 1);
 }
 
-TEST_CASE("segment_tree check order preserving: range righmost query, point "
+TEST_CASE("segment_tree check order preserving: range rightmost query, point "
           "assignment update",
           "[segment_tree]") {
 	std::vector<int> v{3, 2, 8, 5};
@@ -79,6 +79,19 @@ TEST_CASE("segment_tree check order preserving: range righmost query, point "
 	st.modify(2, 4);
 	REQUIRE(st.query(2, 3) == 5);
 	REQUIRE(st.query(1, 2) == 4);
+}
+
+TEST_CASE("segment_tree check order preserving: range leftmost query, point "
+          "assignment update",
+          "[segment_tree]") {
+	std::vector<int> v{3, 2, 8, 5};
+	segment_tree<int, int, fn::noop, fn::assign> st(v);
+	REQUIRE(st.query(0, 1) == 3);
+	st.modify(1, 10);
+	REQUIRE(st.query(1, 1) == 10);
+	st.modify(2, 4);
+	REQUIRE(st.query(2, 3) == 4);
+	REQUIRE(st.query(1, 2) == 10);
 }
 
 TEST_CASE("lazy_segment_tree: range max query, point add update",
