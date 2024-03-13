@@ -15,6 +15,8 @@
 #include <optional>
 #include <vector>
 
+#include "functional.hpp"
+
 template <class T, class U = T, class CombineOp = std::plus<>,
           class UpdateOp = std::plus<>>
 class segment_tree {
@@ -63,7 +65,8 @@ class segment_tree {
 };
 
 template <class T, class U = T, class CombineOp = std::plus<>,
-          class UpdateOp = std::plus<>, class CombineUpdateOp = UpdateOp>
+          class UpdateOp = std::plus<>, class CombineUpdateOp = UpdateOp,
+          class UpdateLenOp = fn::noop>
 class lazy_segment_tree {
 	size_t n, h;
 	std::vector<T> tree;
@@ -71,18 +74,17 @@ class lazy_segment_tree {
 	CombineOp combinator;
 	UpdateOp updater;
 	CombineUpdateOp lazyCombinator;
+	UpdateLenOp updaterLen;
 
 	void calc(size_t p, size_t len) {
 		tree[p] = combinator(tree[p << 1], tree[p << 1 | 1]);
 		if (lazy[p]) {
-			// tree[p] = updater(tree[p], lazy[p], len);
-			tree[p] = updater(tree[p], *lazy[p]);
+			tree[p] = updater(tree[p], updaterLen(*lazy[p], len));
 		}
 	}
 
 	void apply(size_t p, const U &val, size_t len) {
-		// tree[p] = updater(tree[p], val, len);
-		tree[p] = updater(tree[p], val);
+		tree[p] = updater(tree[p], updaterLen(val, len));
 		if (p < n)
 			lazy[p] = lazy[p].has_value() ? lazyCombinator(*lazy[p], val) : val;
 	}
@@ -108,19 +110,21 @@ class lazy_segment_tree {
   public:
 	explicit lazy_segment_tree(const std::vector<T> &init,
 	                           CombineOp combinator = {}, UpdateOp updater = {},
-	                           CombineUpdateOp lazyCombinator = {})
+	                           CombineUpdateOp lazyCombinator = {},
+	                           UpdateLenOp updaterLen = {})
 	    : n(init.size()), h(std::bit_width(n)), tree(n), lazy(n + n),
 	      combinator(combinator), updater(updater),
-	      lazyCombinator(lazyCombinator) {
+	      lazyCombinator(lazyCombinator), updaterLen(updaterLen) {
 		copy(init.begin(), init.end(), back_inserter(tree));
 		for (int i = n - 1; i > 0; i--)
 			tree[i] = combinator(tree[i << 1], tree[i << 1 | 1]);
 	}
 	explicit lazy_segment_tree(size_t n, const T &init = {},
 	                           CombineOp combinator = {}, UpdateOp updater = {},
-	                           CombineUpdateOp lazyCombinator = {})
+	                           CombineUpdateOp lazyCombinator = {},
+	                           UpdateLenOp updaterLen = {})
 	    : lazy_segment_tree(std::vector<T>(n, init), combinator, updater,
-	                        lazyCombinator) {}
+	                        lazyCombinator, updaterLen) {}
 
 	void modify(int l, int r, const U &val) {
 		push(l);
