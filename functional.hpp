@@ -84,6 +84,13 @@ template <> struct gcd<void> {
 	}
 };
 
+struct assign {
+	template <class T1, class T2>
+	constexpr T2 &&operator()(T1 &&, T2 &&t) const noexcept {
+		return std::forward<T2>(t);
+	}
+};
+
 } // namespace fn
 
 #endif
