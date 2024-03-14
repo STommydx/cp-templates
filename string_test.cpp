@@ -12,3 +12,9 @@ TEST_CASE("prefix function behaves as expected", "[string]") {
 	std::vector<int> v = {2, 2, 8, 1, 5, 3, 2, 2, 8};
 	REQUIRE(prefix_function(v) == std::vector<int>{0, 1, 0, 0, 0, 0, 1, 2, 3});
 }
+
+TEST_CASE("kmp behaves as expected", "[string]") {
+	std::string s = "ababa";
+	std::string p = "aba";
+	REQUIRE(kmp(s, p) == std::vector<int>{0, 2});
+}

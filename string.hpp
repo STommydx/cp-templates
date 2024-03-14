@@ -22,4 +22,16 @@ std::vector<int> prefix_function(std::ranges::random_access_range auto &&s) {
 	return pi;
 }
 
+std::vector<int> kmp(const std::string &str, const std::string &pattern) {
+	std::vector<int> pi = prefix_function(pattern + "#" + str);
+	std::vector<int> result;
+	auto m = std::ranges::ssize(pattern);
+	for (int i = m + 1; i < std::ranges::ssize(pi); i++) {
+		if (pi[i] == m) {
+			result.push_back(i - m - m);
+		}
+	}
+	return result;
+}
+
 #endif
