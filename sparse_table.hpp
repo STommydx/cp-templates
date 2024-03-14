@@ -10,9 +10,9 @@
 #include <vector>
 
 template <class T, class Op = std::bit_or<>> class sparse_table {
-	Op op;
 	size_t n, m;
 	std::vector<std::vector<T>> dp;
+	Op op;
 
   public:
 	sparse_table(const std::vector<T> &init, const Op &comb = {})
