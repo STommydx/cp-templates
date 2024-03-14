@@ -152,7 +152,7 @@ template <int N> class prime_sieve {
 		for (int i = 2; i < N; i++) {
 			if (!min_prime_factor[i]) {
 				min_prime_factor[i] = i;
-				if (i * i >= N)
+				if (1LL * i * i >= N)
 					continue;
 				for (int j = i * i; j < N; j += i)
 					if (!min_prime_factor[j])
