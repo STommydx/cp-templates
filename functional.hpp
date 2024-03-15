@@ -41,7 +41,7 @@ template <class Proj, class Comp> class minimum<void, Proj, Comp> {
 	}
 };
 template <class Comp, class Proj>
-minimum(Comp, Proj) -> minimum<void, Comp, Proj>;
+minimum(Comp, Proj) -> minimum<void, Proj, Comp>;
 
 template <class T = void, class Proj = std::identity,
           class Comp = std::ranges::less>
@@ -71,7 +71,7 @@ template <class Proj, class Comp> class maximum<void, Proj, Comp> {
 	}
 };
 template <class Comp, class Proj>
-maximum(Comp, Proj) -> maximum<void, Comp, Proj>;
+maximum(Comp, Proj) -> maximum<void, Proj, Comp>;
 
 template <class T = void> struct gcd {
 	constexpr T operator()(T lhs, T rhs) const { return std::gcd(lhs, rhs); }
