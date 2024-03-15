@@ -56,3 +56,13 @@ TEST_CASE("IO for weighted graph", "[graph]") {
 	REQUIRE(bi_g.get_in_degree() == std::vector<int>{2, 2, 3, 1});
 	REQUIRE(bi_g.get_out_degree() == std::vector<int>{2, 2, 3, 1});
 }
+
+TEST_CASE("building connected components", "[graph]") {
+	std::vector<graph<>::edge> edges{{0, 1}, {1, 0}, {1, 2},
+	                                 {2, 1}, {3, 4}, {4, 3}};
+	graph<> g(5, edges);
+	auto [color, components] = g.get_connected_components();
+	REQUIRE(color == std::vector<int>{0, 0, 0, 1, 1});
+	REQUIRE(components[0] == std::vector<int>{0, 1, 2});
+	REQUIRE(components[1] == std::vector<int>{3, 4});
+}

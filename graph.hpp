@@ -67,6 +67,33 @@ template <> class graph<void> : public std::vector<std::vector<int>> {
 		}
 		return *out_degree;
 	}
+
+	using connected_components_result =
+	    std::pair<std::vector<int>, std::vector<vector<int>>>;
+	connected_components_result get_connected_components() {
+		const int uncolored = -1;
+		int total_colors = 0;
+		vector<int> color(n, uncolored);
+		auto dfs = [&](auto &self, int u) -> void {
+			for (int v : (*this)[u]) {
+				if (color[v] == uncolored) {
+					color[v] = color[u];
+					self(self, v);
+				}
+			}
+		};
+		for (int u = 0; u < n; u++) {
+			if (color[u] == uncolored) {
+				color[u] = total_colors++;
+				dfs(dfs, u);
+			}
+		}
+		std::vector<std::vector<int>> components(total_colors);
+		for (int u = 0; u < n; u++) {
+			components[color[u]].push_back(u);
+		}
+		return {std::move(color), std::move(components)};
+	}
 };
 
 template <bool directed = true, int base = 1>
