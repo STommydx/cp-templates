@@ -33,6 +33,12 @@ TEST_CASE("unweighted graph functionality test", "[graph]") {
 	SECTION("unweighted graph has correct out degree") {
 		REQUIRE(g.get_out_degree() == std::vector<int>{1, 1, 2, 0});
 	}
+
+	SECTION("reversed unweighted graph is correct") {
+		graph<> g_rev = g.reversed();
+		REQUIRE(g_rev.size() == 4);
+		REQUIRE(g.get_in_degree() == g_rev.get_out_degree());
+	}
 }
 
 TEST_CASE("IO for unweighted graph", "[graph]") {

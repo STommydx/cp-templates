@@ -29,7 +29,7 @@ template <> class graph<void> : public std::vector<std::vector<int>> {
 	}
 
 	explicit graph(const std::vector<int> &parents) : graph(parents.size()) {
-		for (int i = 0; i < n; i++) {
+		for (size_t i = 0; i < n; i++) {
 			if (parents[i] != no_parent)
 				push_edge(parents[i], i);
 		}
@@ -48,7 +48,7 @@ template <> class graph<void> : public std::vector<std::vector<int>> {
 	vector<int> get_in_degree() {
 		if (!in_degree) {
 			vector<int> ind(n);
-			for (int i = 0; i < n; i++) {
+			for (size_t i = 0; i < n; i++) {
 				for (int v : (*this)[i])
 					ind[v]++;
 			}
@@ -60,12 +60,22 @@ template <> class graph<void> : public std::vector<std::vector<int>> {
 	vector<int> get_out_degree() {
 		if (!out_degree) {
 			vector<int> outd(n);
-			for (int i = 0; i < n; i++) {
+			for (size_t i = 0; i < n; i++) {
 				outd[i] = (*this)[i].size();
 			}
 			out_degree = std::move(outd);
 		}
 		return *out_degree;
+	}
+
+	graph<void> reversed() const {
+		graph<void> g(n);
+		for (size_t u = 0; u < n; u++) {
+			for (int v : (*this)[u]) {
+				g.push_edge(v, u);
+			}
+		}
+		return g;
 	}
 
 	using connected_components_result =
@@ -82,14 +92,14 @@ template <> class graph<void> : public std::vector<std::vector<int>> {
 				}
 			}
 		};
-		for (int u = 0; u < n; u++) {
+		for (size_t u = 0; u < n; u++) {
 			if (color[u] == uncolored) {
 				color[u] = total_colors++;
 				dfs(dfs, u);
 			}
 		}
 		std::vector<std::vector<int>> components(total_colors);
-		for (int u = 0; u < n; u++) {
+		for (size_t u = 0; u < n; u++) {
 			components[color[u]].push_back(u);
 		}
 		return {std::move(color), std::move(components)};
