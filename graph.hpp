@@ -13,6 +13,7 @@
 template <class T = void> class graph;
 
 template <> class graph<void> : public std::vector<std::vector<int>> {
+  protected:
 	size_t n, m = 0;
 
 	std::optional<vector<int>> in_degree, out_degree;
@@ -76,6 +77,26 @@ template <> class graph<void> : public std::vector<std::vector<int>> {
 			}
 		}
 		return g;
+	}
+
+	std::vector<std::vector<bool>> adjacency_matrix() const {
+		std::vector<std::vector<bool>> adj(n, std::vector<bool>(n, false));
+		for (size_t u = 0; u < n; u++) {
+			for (int v : (*this)[u]) {
+				adj[u][v] = true;
+			}
+		}
+		return adj;
+	}
+
+	std::vector<edge> edge_list() const {
+		std::vector<edge> res;
+		for (size_t u = 0; u < n; u++) {
+			for (int v : (*this)[u]) {
+				res.emplace_back(u, v);
+			}
+		}
+		return res;
 	}
 
 	using connected_components_result =
@@ -144,6 +165,27 @@ template <class T> class graph : public graph<void> {
 	template <class... Args> void emplace_edge(int u, int v, Args &&...args) {
 		dat[u].emplace_back(std::forward<Args>(args)...);
 		graph<void>::push_edge(u, v);
+	}
+
+	std::vector<std::vector<T>> adjacency_matrix() const {
+		std::vector<std::vector<T>> adj(n, std::vector<T>(n));
+		for (size_t u = 0; u < n; u++) {
+			for (size_t i = 0; i < dat[u].size(); i++) {
+				adj[u][(*this)[u][i]] = dat[u][i];
+			}
+		}
+		return adj;
+	}
+
+	std::vector<edge> edge_list() const {
+		std::vector<edge> res;
+		for (size_t u = 0; u < n; u++) {
+			for (size_t i = 0; i < dat[u].size(); i++) {
+				res.emplace_back(std::pair<int, int>(u, (*this)[u][i]),
+				                 dat[u][i]);
+			}
+		}
+		return res;
 	}
 };
 

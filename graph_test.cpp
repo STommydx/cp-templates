@@ -39,6 +39,64 @@ TEST_CASE("unweighted graph functionality test", "[graph]") {
 		REQUIRE(g_rev.size() == 4);
 		REQUIRE(g.get_in_degree() == g_rev.get_out_degree());
 	}
+
+	SECTION("adjacency matrix is correct") {
+		REQUIRE(g.adjacency_matrix() ==
+		        std::vector<std::vector<bool>>{
+		            {0, 1, 0, 0}, {0, 0, 1, 0}, {1, 0, 0, 1}, {0, 0, 0, 0}});
+	}
+
+	SECTION("edge list is correct") {
+		REQUIRE(g.edge_list() ==
+		        std::vector<graph<>::edge>{
+		            std::pair<int, int>(0, 1), std::pair<int, int>(1, 2),
+		            std::pair<int, int>(2, 0), std::pair<int, int>(2, 3)});
+	}
+}
+
+TEST_CASE("weighted graph functionality test", "[graph]") {
+	graph<int> g(4);
+	g.push_edge(0, 1, 4);
+	g.push_edge(1, 2, 1);
+	g.push_edge(2, 0, 5);
+	g.push_edge(2, 3, 8);
+
+	SECTION("weighted graph contains all edges") {
+		REQUIRE(g.size() == 4);
+		REQUIRE(g[0].size() == 1);
+		REQUIRE(g[1].size() == 1);
+		REQUIRE(g[2].size() == 2);
+		REQUIRE(g[3].size() == 0);
+	}
+
+	SECTION("weighted graph has correct edges") {
+		REQUIRE(g[0][0] == 1);
+		REQUIRE(g[1][0] == 2);
+		REQUIRE(g[2][0] == 0);
+		REQUIRE(g[2][1] == 3);
+		REQUIRE(g.dat[0][0] == 4);
+		REQUIRE(g.dat[1][0] == 1);
+		REQUIRE(g.dat[2][0] == 5);
+		REQUIRE(g.dat[2][1] == 8);
+	}
+
+	SECTION("adjacency matrix is correct") {
+		REQUIRE(g.adjacency_matrix() ==
+		        std::vector<std::vector<int>>{
+		            {0, 4, 0, 0}, {0, 0, 1, 0}, {5, 0, 0, 8}, {0, 0, 0, 0}});
+	}
+
+	SECTION("edge list is correct") {
+		REQUIRE(g.edge_list() == std::vector<graph<int>::edge>{
+		                             std::pair<std::pair<int, int>, int>(
+		                                 std::pair<int, int>(0, 1), 4),
+		                             std::pair<std::pair<int, int>, int>(
+		                                 std::pair<int, int>(1, 2), 1),
+		                             std::pair<std::pair<int, int>, int>(
+		                                 std::pair<int, int>(2, 0), 5),
+		                             std::pair<std::pair<int, int>, int>(
+		                                 std::pair<int, int>(2, 3), 8)});
+	}
 }
 
 TEST_CASE("IO for unweighted graph", "[graph]") {
