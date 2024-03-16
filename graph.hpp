@@ -16,8 +16,6 @@ template <> class graph<void> : public std::vector<std::vector<int>> {
   protected:
 	size_t n, m = 0;
 
-	std::optional<vector<int>> in_degree, out_degree;
-
   public:
 	static const int no_parent = -1;
 
@@ -46,27 +44,21 @@ template <> class graph<void> : public std::vector<std::vector<int>> {
 		m++;
 	}
 
-	vector<int> get_in_degree() {
-		if (!in_degree) {
-			vector<int> ind(n);
-			for (size_t i = 0; i < n; i++) {
-				for (int v : (*this)[i])
-					ind[v]++;
-			}
-			in_degree = std::move(ind);
+	vector<int> get_in_degree() const {
+		vector<int> in_degree(n);
+		for (size_t i = 0; i < n; i++) {
+			for (int v : (*this)[i])
+				in_degree[v]++;
 		}
-		return *in_degree;
+		return in_degree;
 	}
 
-	vector<int> get_out_degree() {
-		if (!out_degree) {
-			vector<int> outd(n);
-			for (size_t i = 0; i < n; i++) {
-				outd[i] = (*this)[i].size();
-			}
-			out_degree = std::move(outd);
+	vector<int> get_out_degree() const {
+		vector<int> out_degree(n);
+		for (size_t i = 0; i < n; i++) {
+			out_degree[i] = (*this)[i].size();
 		}
-		return *out_degree;
+		return out_degree;
 	}
 
 	graph<void> reversed() const {
