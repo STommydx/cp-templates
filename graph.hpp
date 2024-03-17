@@ -337,12 +337,11 @@ template <class Op> class lca<void, Op> {
 	int operator()(int u, int v) const {
 		if (depth[u] > depth[v])
 			std::swap(u, v);
-		for (int j = m - 1; j >= 0; j--)
-			if (int nv = dp[j][v]; nv != no_parent && depth[nv] >= depth[u])
-				v = nv;
+		while (depth[v] > depth[u])
+			v = dp[std::bit_width<unsigned int>(depth[v] - depth[u]) - 1][v];
 		if (u == v)
 			return v;
-		for (int j = m - 1; j >= 0; j--)
+		for (int j = std::bit_width<unsigned int>(depth[v]) - 1; j >= 0; j--)
 			if (dp[j][u] != dp[j][v])
 				u = dp[j][u], v = dp[j][v];
 		return dp[0][u];
