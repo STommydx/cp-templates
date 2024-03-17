@@ -190,7 +190,7 @@ template <> class graph<void> : public std::vector<std::vector<int>> {
 		vector<int> in_degree = get_in_degree();
 		vector<int> result;
 		vector<int> q;
-		for (int i = 0; i < n; i++) {
+		for (size_t i = 0; i < n; i++) {
 			if (in_degree[i] == 0) {
 				q.push_back(i);
 			}
