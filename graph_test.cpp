@@ -99,6 +99,53 @@ TEST_CASE("weighted graph functionality test", "[graph]") {
 	}
 }
 
+TEST_CASE("DFS graph traversal", "[graph]") {
+	graph<> g(4);
+	g.push_edge(0, 1);
+	g.push_edge(1, 2);
+	g.push_edge(2, 0);
+	g.push_edge(2, 3);
+	auto [pre_order, post_order, depth, parent] = g.dfs_traversal();
+	REQUIRE(pre_order == std::vector<int>{0, 1, 2, 3});
+	REQUIRE(post_order == std::vector<int>{3, 2, 1, 0});
+	REQUIRE(depth == std::vector<int>{0, 1, 2, 3});
+	REQUIRE(parent == std::vector<int>{graph<>::no_parent, 0, 1, 2});
+}
+
+TEST_CASE("BFS graph traversal", "[graph]") {
+	graph<> g(4);
+	g.push_edge(0, 1);
+	g.push_edge(0, 2);
+	g.push_edge(1, 2);
+	g.push_edge(2, 0);
+	g.push_edge(2, 3);
+	auto [order, distance, parent] = g.bfs_traversal();
+	REQUIRE(order == std::vector<int>{0, 1, 2, 3});
+	REQUIRE(distance == std::vector<int>{0, 1, 1, 2});
+	REQUIRE(parent == std::vector<int>{graph<>::no_parent, 0, 0, 2});
+}
+
+TEST_CASE("topological sort on DAG", "[graph]") {
+	graph<> g(4);
+	g.push_edge(0, 1);
+	g.push_edge(2, 3);
+	g.push_edge(0, 2);
+	g.push_edge(1, 3);
+	std::optional<std::vector<int>> sort_result = g.topological_sort();
+	REQUIRE(sort_result);
+	REQUIRE(*sort_result == std::vector<int>{0, 2, 1, 3});
+}
+
+TEST_CASE("topological sort on graph with cycles", "[graph]") {
+	graph<> g(4);
+	g.push_edge(0, 1);
+	g.push_edge(1, 2);
+	g.push_edge(2, 3);
+	g.push_edge(3, 1);
+	std::optional<std::vector<int>> sort_result = g.topological_sort();
+	REQUIRE(!sort_result);
+}
+
 TEST_CASE("IO for unweighted graph", "[graph]") {
 	std::stringstream ss{"1 2\n2 3\n3 1\n3 4"};
 	graph<> g = read_unweighted_graph(ss, 4, 4);

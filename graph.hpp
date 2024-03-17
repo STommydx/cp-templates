@@ -8,6 +8,7 @@
 
 #include <iostream>
 #include <optional>
+#include <queue>
 #include <vector>
 
 template <class T = void> class graph;
@@ -17,7 +18,9 @@ template <> class graph<void> : public std::vector<std::vector<int>> {
 	size_t n, m = 0;
 
   public:
-	static const int no_parent = -1;
+	static constexpr int no_parent = -1;
+	static constexpr int inf = 0x3f3f3f3f;
+	static constexpr int all_nodes = -1;
 
 	using edge = std::pair<int, int>;
 
@@ -93,7 +96,7 @@ template <> class graph<void> : public std::vector<std::vector<int>> {
 
 	using connected_components_result =
 	    std::pair<std::vector<int>, std::vector<vector<int>>>;
-	connected_components_result get_connected_components() {
+	connected_components_result get_connected_components() const {
 		const int uncolored = -1;
 		int total_colors = 0;
 		vector<int> color(n, uncolored);
@@ -116,6 +119,97 @@ template <> class graph<void> : public std::vector<std::vector<int>> {
 			components[color[u]].push_back(u);
 		}
 		return {std::move(color), std::move(components)};
+	}
+
+	using dfs_traversal_result = std::tuple<std::vector<int>, std::vector<int>,
+	                                        std::vector<int>, std::vector<int>>;
+	dfs_traversal_result dfs_traversal(int start_node = all_nodes) const {
+		vector<int> pre_order, post_order;
+		vector<int> depth(n, inf), parent(n, no_parent);
+		auto dfs = [&](auto &self, int u) -> void {
+			pre_order.push_back(u);
+			for (int v : (*this)[u]) {
+				if (depth[v] == inf) {
+					depth[v] = depth[u] + 1;
+					parent[v] = u;
+					self(self, v);
+				}
+			}
+			post_order.push_back(u);
+		};
+		if (start_node != all_nodes) {
+			depth[start_node] = 0;
+			dfs(dfs, start_node);
+		} else {
+			for (size_t i = 0; i < n; i++) {
+				if (depth[i] == inf) {
+					depth[i] = 0;
+					dfs(dfs, i);
+				}
+			}
+		}
+		return {std::move(pre_order), std::move(post_order), std::move(depth),
+		        std::move(parent)};
+	}
+
+	using bfs_traversal_result =
+	    std::tuple<std::vector<int>, std::vector<int>, std::vector<int>>;
+	bfs_traversal_result bfs_traversal(int start_node = all_nodes) const {
+		vector<int> order;
+		vector<int> distance(n, inf), parent(n, no_parent);
+		auto bfs = [&](int s) -> void {
+			std::queue<int> q;
+			q.push(s);
+			distance[s] = 0;
+			while (!q.empty()) {
+				int u = q.front();
+				q.pop();
+				order.push_back(u);
+				for (int v : (*this)[u]) {
+					if (distance[v] == inf) {
+						distance[v] = distance[u] + 1;
+						parent[v] = u;
+						q.push(v);
+					}
+				}
+			}
+		};
+		if (start_node != all_nodes) {
+			bfs(start_node);
+		} else {
+			for (size_t i = 0; i < n; i++) {
+				if (distance[i] == inf) {
+					bfs(i);
+				}
+			}
+		}
+		return {std::move(order), std::move(distance), std::move(parent)};
+	}
+
+	std::optional<std::vector<int>> topological_sort() const {
+		vector<int> in_degree = get_in_degree();
+		vector<int> result;
+		vector<int> q;
+		for (int i = 0; i < n; i++) {
+			if (in_degree[i] == 0) {
+				q.push_back(i);
+			}
+		}
+		while (!q.empty()) {
+			int u = q.back();
+			q.pop_back();
+			result.push_back(u);
+			for (int v : (*this)[u]) {
+				in_degree[v]--;
+				if (in_degree[v] == 0) {
+					q.push_back(v);
+				}
+			}
+		}
+		if (result.size() != n) {
+			return std::nullopt;
+		}
+		return result;
 	}
 };
 
