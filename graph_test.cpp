@@ -177,3 +177,29 @@ TEST_CASE("building connected components", "[graph]") {
 	REQUIRE(components[0] == std::vector<int>{0, 1, 2});
 	REQUIRE(components[1] == std::vector<int>{3, 4});
 }
+
+TEST_CASE("lowest common ancestor", "[graph]") {
+	graph<> g(7);
+	g.push_edge(0, 1);
+	g.push_edge(0, 2);
+	g.push_edge(1, 3);
+	g.push_edge(1, 4);
+	g.push_edge(4, 5);
+	g.push_edge(4, 6);
+	lca<> l(g);
+	REQUIRE(l.kth_ancestor(0, 1) == lca<>::no_parent);
+	REQUIRE(l.kth_ancestor(3, 1) == 1);
+	REQUIRE(l.kth_ancestor(3, 3) == lca<>::no_parent);
+	REQUIRE(l.kth_ancestor(5, 1) == 4);
+	REQUIRE(l.kth_ancestor(5, 2) == 1);
+	REQUIRE(l.kth_ancestor(5, 3) == 0);
+	REQUIRE(l.kth_ancestor(5, 4) == lca<>::no_parent);
+	REQUIRE(l.kth_ancestor(6, 1) == 4);
+	REQUIRE(l.kth_ancestor(5, 4) == lca<>::no_parent);
+	REQUIRE(l.kth_ancestor(5, 15) == lca<>::no_parent);
+	REQUIRE(l.kth_ancestor(5, 128) == lca<>::no_parent);
+	REQUIRE(l(5, 6) == 4);
+	REQUIRE(l(3, 4) == 1);
+	REQUIRE(l(2, 6) == 0);
+	REQUIRE(l(5, 0) == 0);
+}
