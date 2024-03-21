@@ -1,6 +1,6 @@
 # Competitive Programming Templates
 
-This repository contains templates that is commonly used in competitive programming. The templates aim to be as generic as possible, and are written in C++20 with modern C++ pratices. Unlike other template repositories, unit tests are also included to ensure correctness of the templates. In addition, the repository contains tool that aids compiling and packing source to single file for submission.
+Welcome to my Competitive Programming Templates repository. Here, you'll find a collection of commonly used templates for competitive programming. These templates are meticulously crafted in C++20, utilizing modern C++ practices to ensure efficiency and clarity. They aim to be as generic as possible to fit all use cases. Unlike many other template repositories, we go the extra mile by incorporating unit tests, guaranteeing the correctness and reliability of each template. Additionally, a convenient tool is provided to compile and pack your source code into a single file for submission.
 
 ## Included Templates
 
@@ -35,9 +35,9 @@ This repository contains templates that is commonly used in competitive programm
 
 ### Method A: ccli
 
-For your convenience, you can use [ccli](tools/ccli/README.md) tool to compile and pack source code to single file. Include templates using `#include` directive in your source code and `ccli` will take care of the rest. See README in [tools/ccli](tools/ccli/README.md) for more details.
+For your convenience, leverage our [ccli](tools/ccli/README.md) tool to seamlessly compile and pack your source code into a single file. Simply include the desired templates using the #include directive in your source code, and let ccli handle the rest. Refer to the README in [tools/ccli](tools/ccli/README.md) for comprehensive instructions.
 
-You may download ccli directly from release page. Alternatively, you can install ccli with the following command:
+To obtain ccli, you may either download it directly from the release page or install it via the following command:
 
 ```bash
 git clone https://github.com/STommydx/cp-templates.git
@@ -45,25 +45,29 @@ cd cp-templates/tools/ccli
 go install .
 ```
 
-The following command can get you started with `ccli`.
+Once installed, kickstart your project with the following command:
 
 ```bash
 ccli init project-name
 ```
 
-This command will create a project folder `project-name` (you may name it using the contest name `atcoder-abc-123` for example) and copy all templates to the `templates` folder inside. You can include templates using `#include` directive in your source code, like `#include "templates/fenwick.hpp"`.
+Replace `project-name` with your desired project folder name, such as `atcoder-abc-123` for instance. This command will create the specified folder and populate it with all necessary templates within a templates subfolder. Then, simply include templates using `#include` directives in your source code, like so: `#include "templates/fenwick.hpp"`.
 
-This command will copy all templates to `A.cpp`, compile it and run it. You can find the merged source code in folder `submissions/A.cpp`.
+Additionally, running the following command will automatically copy all templates to A.cpp, compile it, and execute it. The merged source code will be available in the submissions folder `submissions/A.cpp`.
+
+```bash
+ccli run A.cpp
+```
 
 ### Method B: Manual copy and paste
 
-If you prefer not to use ccli, you can manually copy and paste the templates in your source code. All templates are wrapped in `#ifndef` directive to prevent double inclusion.
+If you prefer not to use ccli, you can manually copy and paste the templates into your source code. Rest assured, all templates are encapsulated within `#ifndef` directives to prevent duplicate inclusion.
 
 ## Contributing
 
-Feel free to open an issue or pull request if you have any suggestions or find any bugs. I am happy to address those issues, and I hope the templates will be useful to you.
+Your contributions are greatly appreciated! If you have any suggestions or encounter any bugs, please feel free to open an issue or pull request. We are committed to promptly addressing these concerns, and we hope these templates prove invaluable to your endeavors.
 
-This repository uses the CMake build system. Follow the commands below for building and testing the templates.
+This repository utilizes the CMake build system. To build and test the templates, follow the commands outlined below:
 
 ```bash
 mkdir build
