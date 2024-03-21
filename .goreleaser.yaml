@@ -1,9 +1,9 @@
 version: 1
 
-before:
-  hooks:
-    - cd tools/ccli && go mod tidy
-    - cd tools/ccli && go generate ./...
+# before:
+#   hooks:
+#     - cd tools/ccli && go mod tidy
+#     - cd tools/ccli && go generate ./...
 builds:
   - id: ccli
     dir: ./tools/ccli
