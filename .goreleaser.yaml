@@ -2,12 +2,12 @@ version: 1
 
 before:
   hooks:
-    - go mod tidy
-    - go generate ./...
-
+    - cd tools/ccli && go mod tidy
+    - cd tools/ccli && go generate ./...
 builds:
-  - id: ccil
-    dir: ./tools/ccil
+  - id: ccli
+    dir: ./tools/ccli
+    binary: ccli
     env:
       - CGO_ENABLED=0
     goos:
