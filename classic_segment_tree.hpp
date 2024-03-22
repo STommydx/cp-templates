@@ -206,4 +206,141 @@ class classic_lazy_segment_tree {
 	T query(int l, int r) { return query(l, r, get_root_index(), 0, n - 1); }
 };
 
+template <class T, class U = T, class CombineOp = std::plus<>,
+          class UpdateOp = std::plus<>, class CombineUpdateOp = UpdateOp,
+          class UpdateLenOp = fn::noop, std::integral SizeType = size_t>
+class dynamic_segment_tree {
+	SizeType n;
+	std::vector<T> tree;
+	std::vector<std::optional<U>> lazy;
+	std::vector<size_t> left_child, right_child;
+	std::function<T(SizeType, SizeType)> initializer;
+	CombineOp combinator;
+	UpdateOp updater;
+	CombineUpdateOp lazyCombinator;
+	UpdateLenOp updaterLen;
+	SizeType root;
+
+	// 2n memory implementation
+	// https://cp-algorithms.com/data_structures/segment_tree.html#memory-efficient-implementation
+	size_t get_root_index() const { return root; }
+	size_t get_left_index(size_t p, SizeType lo, SizeType hi) {
+		if (!left_child[p])
+			left_child[p] = create_node(lo, lo + (hi - lo) / 2);
+		return left_child[p];
+	}
+	size_t get_right_index(size_t p, SizeType lo, SizeType hi) {
+		if (!right_child[p])
+			right_child[p] = create_node(lo + (hi - lo) / 2 + 1, hi);
+		return right_child[p];
+	}
+
+	size_t create_node(SizeType lo, SizeType hi) {
+		tree.push_back(initializer(lo, hi));
+		lazy.push_back(std::nullopt);
+		left_child.push_back(0);
+		right_child.push_back(0);
+		return tree.size() - 1;
+	}
+
+	void build(const std::vector<T> &init, size_t p, size_t lo, size_t hi) {
+		if (lo == hi) {
+			tree[p] = init[lo];
+		} else {
+			size_t mi = lo + (hi - lo) / 2;
+			auto ul = get_left_index(p, lo, hi),
+			     ur = get_right_index(p, lo, hi);
+			build(init, ul, lo, mi);
+			build(init, ur, mi + 1, hi);
+			tree[p] = combinator(tree[ul], tree[ur]);
+		}
+	}
+
+	void apply(size_t p, const U &val, SizeType lo, SizeType hi) {
+		tree[p] = updater(tree[p], updaterLen(val, hi - lo + 1));
+		lazy[p] = lazy[p].has_value() ? lazyCombinator(*lazy[p], val) : val;
+	}
+
+	void push(size_t p, SizeType lo, SizeType hi) {
+		if (lazy[p]) {
+			auto mi = lo + (hi - lo) / 2;
+			auto ul = get_left_index(p, lo, hi),
+			     ur = get_right_index(p, lo, hi);
+			apply(ul, *lazy[p], lo, mi);
+			apply(ur, *lazy[p], mi + 1, hi);
+			lazy[p].reset();
+		}
+	}
+
+	void modify(SizeType l, SizeType r, const U &val, size_t u, SizeType lo,
+	            SizeType hi) {
+		if (l <= lo && hi <= r) {
+			apply(u, val, lo, hi);
+			return;
+		}
+		push(u, lo, hi);
+		SizeType mi = lo + (hi - lo) / 2;
+		auto ul = get_left_index(u, lo, hi), ur = get_right_index(u, lo, hi);
+		if (l <= mi) {
+			modify(l, r, val, ul, lo, mi);
+		}
+		if (mi < r) {
+			modify(l, r, val, ur, mi + 1, hi);
+		}
+		tree[u] = combinator(tree[ul], tree[ur]);
+	}
+
+	T query(SizeType l, SizeType r, size_t u, SizeType lo, SizeType hi) {
+		if (l <= lo && hi <= r) {
+			return tree[u];
+		}
+		push(u, lo, hi);
+		SizeType mi = lo + (hi - lo) / 2;
+		auto ul = get_left_index(u, lo, hi), ur = get_right_index(u, lo, hi);
+		if (r <= mi) {
+			return query(l, r, ul, lo, mi);
+		}
+		if (mi < l) {
+			return query(l, r, ur, mi + 1, hi);
+		}
+		return combinator(query(l, r, ul, lo, mi), query(l, r, ur, mi + 1, hi));
+	}
+
+  public:
+	explicit dynamic_segment_tree(
+	    SizeType n, const std::function<T(SizeType, SizeType)> &initializer,
+	    CombineOp combinator = {}, UpdateOp updater = {},
+	    CombineUpdateOp lazyCombinator = {}, UpdateLenOp updaterLen = {})
+	    : n(n), initializer(initializer), combinator(combinator),
+	      updater(updater), lazyCombinator(lazyCombinator),
+	      updaterLen(updaterLen) {
+		root = create_node(0, n - 1);
+	}
+	explicit dynamic_segment_tree(SizeType n, const T &init = {},
+	                              CombineOp combinator = {},
+	                              UpdateOp updater = {},
+	                              CombineUpdateOp lazyCombinator = {},
+	                              UpdateLenOp updaterLen = {})
+	    : dynamic_segment_tree(
+	          n, [init](size_t, size_t) { return init; }, combinator, updater,
+	          lazyCombinator, updaterLen) {}
+	explicit dynamic_segment_tree(const std::vector<T> &init,
+	                              CombineOp combinator = {},
+	                              UpdateOp updater = {},
+	                              CombineUpdateOp lazyCombinator = {},
+	                              UpdateLenOp updaterLen = {})
+	    : dynamic_segment_tree(
+	          init.size(), [init](size_t u, size_t) { return init[u]; },
+	          combinator, updater, lazyCombinator, updaterLen) {
+		build(init, root, 0, n - 1);
+	}
+	void modify(SizeType l, SizeType r, const U &val) {
+		modify(l, r, val, get_root_index(), 0, n - 1);
+	}
+
+	T query(SizeType l, SizeType r) {
+		return query(l, r, get_root_index(), 0, n - 1);
+	}
+};
+
 #endif
