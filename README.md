@@ -13,6 +13,10 @@ Welcome to my Competitive Programming Templates repository. Here, you'll find a 
 - [Segment Tree with Lazy Propagation](segment_tree.hpp)
 - [Sparse Table](sparse_table.hpp)
 
+### Geometry
+
+- [Convex Hull Trick](cht.hpp)
+
 ### Graphs
 
 - [LCA](graph.hpp)

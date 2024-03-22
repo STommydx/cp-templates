@@ -25,6 +25,7 @@ TEST_CASE("fraction_cmp behaves as expected", "[math]") {
 	REQUIRE(fraction_cmp(22, 7, 314, 100) > 0);
 	REQUIRE(fraction_cmp(-1, 2, 1, 2) > 0);
 	REQUIRE(fraction_cmp(-1, 3, -1, 2) > 0);
+	REQUIRE(fraction_cmp(1, -3, 0, -2) < 0);
 	REQUIRE(fraction_cmp(-19, 17, -38, 34) == 0);
 	REQUIRE(fraction_cmp(0, 1, 0, 1783) == 0);
 	REQUIRE(fraction_cmp(9'999'999'998LL, 9'999'999'999LL, 9'999'999'997LL,

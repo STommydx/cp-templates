@@ -28,6 +28,10 @@ template <std::signed_integral T> constexpr T isqrt(T x) {
  * Modified from https://codeforces.com/blog/entry/21588?#comment-262867
  */
 template <std::integral T> constexpr auto fraction_cmp(T a, T b, T c, T d) {
+	if (b < 0)
+		a = -a, b = -b;
+	if (d < 0)
+		c = -c, d = -d;
 	if (a / b != c / d)
 		return a / b <=> c / d;
 	a %= b, c %= d;
