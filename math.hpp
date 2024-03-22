@@ -23,4 +23,17 @@ template <std::signed_integral T> constexpr T isqrt(T x) {
 	return isqrt(static_cast<std::make_unsigned_t<T>>(x));
 }
 
+/**
+ * Compare two fractions in the form of `a/b` and `c/d` without overflows.
+ * Modified from https://codeforces.com/blog/entry/21588?#comment-262867
+ */
+template <std::integral T> constexpr auto fraction_cmp(T a, T b, T c, T d) {
+	if (a / b != c / d)
+		return a / b <=> c / d;
+	a %= b, c %= d;
+	if (a == 0 || c == 0)
+		return a <=> c;
+	return fraction_cmp(d, c, b, a);
+}
+
 #endif
