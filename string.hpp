@@ -86,8 +86,8 @@ struct alnum {
 
 template <class Charset = charset::lower> class trie {
 	struct trie_node {
-		int count = 0;
-		int count_prefix = 0;
+		size_t count = 0;
+		size_t count_prefix = 0;
 		std::array<size_t, Charset{}.size()> child = {};
 	};
 
@@ -100,26 +100,39 @@ template <class Charset = charset::lower> class trie {
 		return tr.size() - 1;
 	}
 
-	void modify(const std::string &s, int val) {
+	template <bool erase> void modify(const std::string &s, size_t val) {
 		size_t u = root;
-		tr[u].count_prefix += val;
+		if constexpr (erase)
+			tr[u].count_prefix -= val;
+		else
+			tr[u].count_prefix += val;
 		for (char c : s) {
 			size_t v = charset.to_index(c);
 			if (!tr[u].child[v]) {
 				tr[u].child[v] = create_node();
 			}
 			u = tr[u].child[v];
-			tr[u].count_prefix += val;
+			if constexpr (erase)
+				tr[u].count_prefix -= val;
+			else
+				tr[u].count_prefix += val;
 		}
-		tr[u].count += val;
+		if constexpr (erase)
+			tr[u].count -= val;
+		else
+			tr[u].count += val;
 	}
 
   public:
 	trie() { root = create_node(); }
 
-	void insert(const std::string &s, size_t count = 1) { modify(s, count); }
+	void insert(const std::string &s, size_t count = 1) {
+		modify<false>(s, count);
+	}
 
-	void erase(const std::string &s, size_t count = 1) { modify(s, -count); }
+	void erase(const std::string &s, size_t count = 1) {
+		modify<true>(s, count);
+	}
 
 	size_t count(const std::string &s) const {
 		size_t u = root;

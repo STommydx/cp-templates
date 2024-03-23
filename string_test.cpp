@@ -97,4 +97,8 @@ TEST_CASE("trie behaves as expected", "[string]") {
 	REQUIRE(t.find_by_order(1) == "ababa");
 	REQUIRE(t.find_by_order(2) == "ababa");
 	REQUIRE(t.find_by_order(3) == "acba");
+	t.erase("ababa");
+	REQUIRE(t.count("ababa") == 1);
+	REQUIRE(t.count_prefix("") == 3);
+	REQUIRE(t.count_prefix("ab") == 2);
 }
