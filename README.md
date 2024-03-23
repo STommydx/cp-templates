@@ -26,6 +26,7 @@ Welcome to my Competitive Programming Templates repository. Here, you'll find a 
 ### String Algorithms
 
 - [KMP](string.hpp)
+- [Trie](string.hpp)
 
 ### Mathematics
 
