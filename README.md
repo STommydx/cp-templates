@@ -11,11 +11,13 @@ Welcome to my Competitive Programming Templates repository. Here, you'll find a 
 - [Prefix Sum](utilities.hpp)
 - [Segment Tree](segment_tree.hpp)
 - [Segment Tree with Lazy Propagation](segment_tree.hpp)
+- [Segment Tree (Dynamic version)](classic_segment_tree.hpp)
 - [Sparse Table](sparse_table.hpp)
 
 ### Geometry
 
 - [Convex Hull Trick](cht.hpp)
+- [Li Chao Tree](cht.hpp)
 
 ### Graphs
 
