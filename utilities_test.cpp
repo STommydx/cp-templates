@@ -76,21 +76,3 @@ TEST_CASE("compression_vector constructors", "[utilities]") {
 	v3.compress();
 	REQUIRE(v3[0] == "");
 }
-
-TEST_CASE("prime sieve works as expected", "[utilities]") {
-	constexpr prime_sieve<100> ps;
-	static_assert(ps[53] ==
-	              53); // ensure prime_sieve is evaluated at compile time
-	REQUIRE(ps[2] == 2);
-	REQUIRE(ps[6] == 2);
-	REQUIRE(ps[15] == 3);
-	REQUIRE(ps[17] == 17);
-	REQUIRE(ps[97] == 97);
-	REQUIRE(ps[99] == 3);
-	REQUIRE(ps.is_prime(4) == false);
-	REQUIRE(ps.is_prime(5) == true);
-	REQUIRE(ps.is_prime(47) == true);
-	REQUIRE(ps.is_prime(80) == false);
-	REQUIRE(ps.is_prime(89) == true);
-	REQUIRE(ps.is_prime(92) == false);
-}

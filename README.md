@@ -28,7 +28,7 @@ Welcome to my Competitive Programming Templates repository. Here, you'll find a 
 ### Mathematics
 
 - [Integer Square Root](math.hpp)
-- [Prime Sieve](utilities.hpp)
+- [Prime Sieve](math.hpp)
 
 ### Utilities
 

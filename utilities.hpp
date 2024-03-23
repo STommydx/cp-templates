@@ -143,25 +143,4 @@ compression_vector(Iter, Iter, SortCompare, UniqueCompare, Proj)
     -> compression_vector<std::iter_value_t<Iter>, SortCompare, UniqueCompare,
                           Proj>;
 
-template <int N> class prime_sieve {
-	std::array<int, N> min_prime_factor;
-
-  public:
-	constexpr prime_sieve() {
-		min_prime_factor.fill(0);
-		for (int i = 2; i < N; i++) {
-			if (!min_prime_factor[i]) {
-				min_prime_factor[i] = i;
-				if (1LL * i * i >= N)
-					continue;
-				for (int j = i * i; j < N; j += i)
-					if (!min_prime_factor[j])
-						min_prime_factor[j] = i;
-			}
-		}
-	}
-	constexpr int operator[](int n) const { return min_prime_factor[n]; }
-	constexpr bool is_prime(int n) const { return min_prime_factor[n] == n; }
-};
-
 #endif
