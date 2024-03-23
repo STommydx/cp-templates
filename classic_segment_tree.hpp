@@ -219,7 +219,7 @@ class dynamic_segment_tree {
 	UpdateOp updater;
 	CombineUpdateOp lazyCombinator;
 	UpdateLenOp updaterLen;
-	SizeType root;
+	size_t root;
 
 	// 2n memory implementation
 	// https://cp-algorithms.com/data_structures/segment_tree.html#memory-efficient-implementation
