@@ -10,6 +10,7 @@
 #include <cctype>
 #include <queue>
 #include <ranges>
+#include <string_view>
 #include <vector>
 
 #include "functional.hpp"
@@ -351,7 +352,8 @@ class ac_automation : trie<magic_vector<size_t>, size_t, std::plus<>, Charset> {
  * https://oi-wiki.org/string/sa/#onlogn-%E5%81%9A%E6%B3%95
  */
 template <class Charset = charset::lower>
-std::vector<int> suffix_array(const std::string &s) {
+std::pair<std::vector<int>, std::vector<int>>
+build_suffix_array(const std::string &s) {
 	Charset charset;
 	int n = s.size();
 	int m = charset.size(); // storing max_element of rank + 1
@@ -420,8 +422,119 @@ std::vector<int> suffix_array(const std::string &s) {
 		update_rank(rank, sa, [&](int i) {
 			return std::make_pair(rank[i], i + w < n ? rank[i + w] : -1);
 		});
+
+		// stop sort if all suffixes are sorted
+		if (m >= n) {
+			break;
+		}
 	}
-	return sa;
+	return {std::move(sa), std::move(rank)};
 }
+
+std::vector<int> build_lcp(const std::string &s, const std::vector<int> &sa,
+                           const std::vector<int> &rank) {
+	int n = s.size();
+	std::vector<int> lcp(n);
+	int h = 0;
+	for (int i = 0; i < n; i++) {
+		if (rank[i] == 0)
+			continue;
+		if (h)
+			h--;
+		while (s[i + h] == s[sa[rank[i] - 1] + h])
+			h++;
+		lcp[rank[i]] = h;
+	}
+	return lcp;
+}
+
+std::vector<int> build_lcp(const std::string &s) {
+	auto [sa, rank] = build_suffix_array(s);
+	return build_lcp(s, sa, rank);
+}
+
+template <class Charset = charset::lower>
+class suffix_array : public std::vector<int> {
+	std::string s;
+	std::vector<int> rank;
+	std::vector<int> lcp;
+
+	suffix_array(const std::string &s,
+	             const std::pair<vector<int>, vector<int>> &sa_result)
+	    : suffix_array(s, sa_result.first, sa_result.second) {}
+
+  public:
+	suffix_array(const std::string &s, const std::vector<int> &sa,
+	             const std::vector<int> &rank, const std::vector<int> &lcp)
+	    : vector<int>(sa), s(s), rank(rank), lcp(lcp) {}
+	suffix_array(const std::string &s, const std::vector<int> &sa,
+	             const std::vector<int> &rank)
+	    : suffix_array(s, sa, rank, build_lcp(s, sa, rank)) {}
+	suffix_array(const std::string &s)
+	    : suffix_array(s, build_suffix_array(s)) {}
+
+	// accessors
+	std::string &str() { return s; }
+	const std::string &str() const { return s; }
+	std::vector<int> &get_sa() { return *this; }
+	const std::vector<int> &get_sa() const { return *this; }
+	std::vector<int> &get_rank() { return rank; }
+	const std::vector<int> &get_rank() const { return rank; }
+	std::vector<int> &get_lcp() { return lcp; }
+	const std::vector<int> &get_lcp() const { return lcp; }
+
+	size_t count_unique_substrings() const {
+		size_t n = s.size();
+		size_t ans = n * (n + 1) / 2;
+		for (auto lcp_i : lcp) {
+			ans -= lcp_i;
+		}
+		return ans;
+	}
+
+	/**
+	 * Substring search and count functions.
+	 * Use string_view to avoid expensive substring copy operations.
+	 */
+	auto lower_bound(const std::string &t) {
+		std::string_view s_view(s);
+		return std::ranges::lower_bound(
+		    *this, t, std::ranges::less{},
+		    [&s_view, &t](int i) { return s_view.substr(i, t.size()); });
+	}
+	auto lower_bound(const std::string &t) const {
+		std::string_view s_view(s);
+		return std::ranges::lower_bound(
+		    *this, t, std::ranges::less{},
+		    [&s_view, &t](int i) { return s_view.substr(i, t.size()); });
+	}
+	auto upper_bound(const std::string &t) {
+		std::string_view s_view(s);
+		return std::ranges::upper_bound(
+		    *this, t, std::ranges::less{},
+		    [&s_view, &t](int i) { return s_view.substr(i, t.size()); });
+	}
+	auto upper_bound(const std::string &t) const {
+		std::string_view s_view(s);
+		return std::ranges::upper_bound(
+		    *this, t, std::ranges::less{},
+		    [&s_view, &t](int i) { return s_view.substr(i, t.size()); });
+	}
+	auto equal_range(const std::string &t) {
+		std::string_view s_view(s);
+		return std::ranges::equal_range(
+		    *this, t, std::ranges::less{},
+		    [&s_view, &t](int i) { return s_view.substr(i, t.size()); });
+	}
+	auto equal_range(const std::string &t) const {
+		std::string_view s_view(s);
+		return std::ranges::equal_range(
+		    *this, t, std::ranges::less{},
+		    [&s_view, &t](int i) { return s_view.substr(i, t.size()); });
+	}
+	auto count(const std::string &t) const {
+		return std::ranges::distance(equal_range(t));
+	}
+};
 
 #endif

@@ -2,6 +2,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
 #include <string>
 
 TEST_CASE("prefix function behaves as expected", "[string]") {
@@ -114,8 +115,23 @@ TEST_CASE("ac automation count matches", "[string]") {
 }
 
 TEST_CASE("suffix array construction", "[string]") {
-	REQUIRE(suffix_array("ababba") == std::vector<int>{5, 0, 2, 4, 1, 3});
-	REQUIRE(suffix_array("aaaa") == std::vector<int>{3, 2, 1, 0});
-	REQUIRE(suffix_array("ppppplppp") ==
+	REQUIRE(build_suffix_array("ababba").first ==
+	        std::vector<int>{5, 0, 2, 4, 1, 3});
+	REQUIRE(build_suffix_array("aaaa").first == std::vector<int>{3, 2, 1, 0});
+	REQUIRE(build_suffix_array("ppppplppp").first ==
 	        std::vector<int>{5, 8, 4, 7, 3, 6, 2, 1, 0});
+}
+
+TEST_CASE("lcp construction", "[string]") {
+	REQUIRE(build_lcp("ababba") == std::vector<int>{0, 1, 2, 0, 2, 1});
+	REQUIRE(build_lcp("aaaa") == std::vector<int>{0, 1, 2, 3});
+	REQUIRE(build_lcp("ppppplppp") ==
+	        std::vector<int>{0, 0, 1, 1, 2, 2, 3, 3, 4});
+}
+
+TEST_CASE("suffix array applications", "[string]") {
+	suffix_array sa("ababba");
+	REQUIRE(sa.count_unique_substrings() == 15);
+	REQUIRE(sa.count("ab") == 2);
+	REQUIRE(std::ranges::equal(sa.equal_range("ab"), std::vector<int>{0, 2}));
 }
