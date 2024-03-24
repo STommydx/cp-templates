@@ -340,7 +340,7 @@ class ac_automation : trie<magic_vector<size_t>, size_t, std::plus<>, Charset> {
 template <class Charset = charset::lower>
 std::vector<int> suffix_array(const std::string &s) {
 	Charset charset;
-	auto n = s.size();
+	int n = s.size();
 	std::vector<int> sa(n);
 	std::vector<int> rank(n);
 	// initailize suffix array, rank is equal to the index of the character
@@ -359,7 +359,7 @@ std::vector<int> suffix_array(const std::string &s) {
 		std::vector<int> new_rank(rank.size());
 		int current_rank = 0;
 		new_rank[sa[0]] = current_rank;
-		for (int i = 0; i < n; i++) {
+		for (int i = 1; i < n; i++) {
 			if (proj(sa[i]) == proj(sa[i - 1])) {
 				new_rank[sa[i]] = current_rank;
 			} else {
