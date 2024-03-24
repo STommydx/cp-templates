@@ -8,12 +8,13 @@
 
 #include <array>
 #include <cctype>
+#include <queue>
 #include <ranges>
 #include <vector>
 
 std::vector<int> prefix_function(std::ranges::random_access_range auto &&s) {
 	std::vector<int> pi(std::ranges::size(s));
-	for (int i = 1; i < std::ranges::size(s); i++) {
+	for (int i = 1; i < std::ranges::ssize(s); i++) {
 		int j = pi[i - 1];
 		while (j > 0 && s[i] != s[j])
 			j = pi[j - 1];
@@ -85,42 +86,44 @@ struct alnum {
 }; // namespace charset
 
 template <class Charset = charset::lower> class trie {
-	struct trie_node {
-		size_t count = 0;
-		size_t count_prefix = 0;
-		std::array<size_t, Charset{}.size()> child = {};
-	};
+  protected:
+	std::vector<std::array<size_t, Charset{}.size()>> tr;
+	std::vector<size_t> cnt;
+	std::vector<size_t> cnt_prefix;
 
-	std::vector<trie_node> tr;
 	size_t root;
 	Charset charset;
 
+  private:
 	size_t create_node() {
 		tr.emplace_back();
+		tr.back().fill(0);
+		cnt.push_back(0);
+		cnt_prefix.push_back(0);
 		return tr.size() - 1;
 	}
 
 	template <bool erase> void modify(const std::string &s, size_t val) {
 		size_t u = root;
 		if constexpr (erase)
-			tr[u].count_prefix -= val;
+			cnt_prefix[u] -= val;
 		else
-			tr[u].count_prefix += val;
+			cnt_prefix[u] += val;
 		for (char c : s) {
 			size_t v = charset.to_index(c);
-			if (!tr[u].child[v]) {
-				tr[u].child[v] = create_node();
+			if (!tr[u][v]) {
+				tr[u][v] = create_node();
 			}
-			u = tr[u].child[v];
+			u = tr[u][v];
 			if constexpr (erase)
-				tr[u].count_prefix -= val;
+				cnt_prefix[u] -= val;
 			else
-				tr[u].count_prefix += val;
+				cnt_prefix[u] += val;
 		}
 		if constexpr (erase)
-			tr[u].count -= val;
+			cnt[u] -= val;
 		else
-			tr[u].count += val;
+			cnt[u] += val;
 	}
 
   public:
@@ -138,37 +141,37 @@ template <class Charset = charset::lower> class trie {
 		size_t u = root;
 		for (char c : s) {
 			size_t v = charset.to_index(c);
-			if (!tr[u].child[v])
+			if (!tr[u][v])
 				return 0;
-			u = tr[u].child[v];
+			u = tr[u][v];
 		}
-		return tr[u].count;
+		return cnt[u];
 	}
 
 	size_t count_prefix(const std::string &s) const {
 		size_t u = root;
 		for (char c : s) {
 			size_t v = charset.to_index(c);
-			if (!tr[u].child[v])
+			if (!tr[u][v])
 				return 0;
-			u = tr[u].child[v];
+			u = tr[u][v];
 		}
-		return tr[u].count_prefix;
+		return cnt_prefix[u];
 	}
 
 	size_t order_of_key(const std::string &s) const {
 		size_t u = root;
 		size_t ans = 0;
 		for (char c : s) {
-			ans += tr[u].count;
+			ans += cnt[u];
 			size_t v = charset.to_index(c);
 			for (size_t i = 0; i < v; i++) {
-				if (tr[u].child[i])
-					ans += tr[tr[u].child[i]].count_prefix;
+				if (tr[u][i])
+					ans += cnt_prefix[tr[u][i]];
 			}
-			if (!tr[u].child[v])
+			if (!tr[u][v])
 				break;
-			u = tr[u].child[v];
+			u = tr[u][v];
 		}
 		return ans;
 	}
@@ -176,27 +179,78 @@ template <class Charset = charset::lower> class trie {
 	std::string find_by_order(size_t k) const {
 		size_t u = root;
 		std::string ans;
-		while (k < tr[u].count_prefix) {
-			if (k < tr[u].count) {
+		while (k < cnt_prefix[u]) {
+			if (k < cnt[u]) {
 				break;
 			}
-			k -= tr[u].count;
+			k -= cnt[u];
 			size_t i = 0;
 			for (; i < charset.size(); i++) {
-				if (tr[u].child[i]) {
-					if (k < tr[tr[u].child[i]].count_prefix) {
+				if (tr[u][i]) {
+					if (k < cnt_prefix[tr[u][i]]) {
 						break;
 					}
-					k -= tr[tr[u].child[i]].count_prefix;
+					k -= cnt_prefix[tr[u][i]];
 				}
 			}
 			ans.push_back(charset.to_char(i));
-			u = tr[u].child[i];
+			u = tr[u][i];
 		}
 		return ans;
 	}
 
-	size_t size() const { return tr[root].count_prefix; }
+	size_t size() const { return cnt_prefix[root]; }
+};
+
+template <class Charset = charset::lower>
+class ac_automation : public trie<Charset> {
+	std::vector<size_t> fail;
+
+	using trie<Charset>::tr;
+	using trie<Charset>::cnt;
+	using trie<Charset>::root;
+	using trie<Charset>::charset;
+
+  public:
+	ac_automation() : trie<Charset>() {}
+
+	void build() {
+		fail.assign(tr.size(), 0);
+		std::queue<size_t> q;
+		for (size_t i = 0; i < charset.size(); i++) {
+			if (tr[root][i]) {
+				fail[tr[root][i]] = root;
+				q.push(tr[root][i]);
+			}
+		}
+		while (!q.empty()) {
+			size_t u = q.front();
+			q.pop();
+			for (size_t i = 0; i < charset.size(); i++) {
+				if (tr[u][i]) {
+					fail[tr[u][i]] = tr[fail[u]][i];
+					q.push(tr[u][i]);
+				} else {
+					tr[u][i] = tr[fail[u]][i];
+				}
+			}
+		}
+	}
+
+	size_t count_matches(const std::string &s) const {
+		std::vector<size_t> ans_cnt(cnt);
+		size_t ans = 0;
+		size_t u = root;
+		for (char c : s) {
+			int v = charset.to_index(c);
+			u = tr[u][v];
+			for (size_t t = u; t && ans_cnt[t]; t = fail[t]) {
+				ans += ans_cnt[t];
+				ans_cnt[t] = 0;
+			}
+		}
+		return ans;
+	}
 };
 
 #endif

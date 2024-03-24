@@ -102,3 +102,18 @@ TEST_CASE("trie behaves as expected", "[string]") {
 	REQUIRE(t.count_prefix("") == 3);
 	REQUIRE(t.count_prefix("ab") == 2);
 }
+
+TEST_CASE("ac automation count matches", "[string]") {
+	ac_automation ac;
+	ac.insert("aba");
+	ac.insert("aba");
+	ac.insert("bcd");
+	ac.insert("acba");
+	ac.insert("babc");
+	ac.build();
+	REQUIRE(ac.count_matches("ababaca") == 2);
+	REQUIRE(ac.count_matches("abababc") == 3);
+	REQUIRE(ac.count_matches("babcd") == 2);
+	REQUIRE(ac.count_matches("abdabd") == 0);
+	REQUIRE(ac.count_matches("ab") == 0);
+}
