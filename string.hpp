@@ -337,4 +337,38 @@ class ac_automation : trie<magic_vector<size_t>, size_t, std::plus<>, Charset> {
 	}
 };
 
+template <class Charset = charset::lower>
+std::vector<int> suffix_array(const std::string &s) {
+	Charset charset;
+	auto n = s.size();
+	std::vector<int> sa(n);
+	std::vector<int> rank(n);
+	// initailize suffix array, rank is equal to the index of the character
+	// in the charset
+	for (int i = 0; i < n; i++)
+		sa[i] = i, rank[i] = charset.to_index(s[i]);
+	// sort s[i..i + w - 1] for w = 1, 2, 4, 8, ...
+	// compare (rank[i], rank[i + w / 2])
+	for (int w = 1; w < n; w += w) {
+		auto proj = [&](int i) {
+			return std::make_pair(rank[i], i + w < n ? rank[i + w] : -1);
+		};
+		// O(n log n) sorting with std::sort
+		std::ranges::sort(sa, std::ranges::less{}, proj);
+		// update rank
+		std::vector<int> new_rank(rank.size());
+		int current_rank = 0;
+		new_rank[sa[0]] = current_rank;
+		for (int i = 0; i < n; i++) {
+			if (proj(sa[i]) == proj(sa[i - 1])) {
+				new_rank[sa[i]] = current_rank;
+			} else {
+				new_rank[sa[i]] = ++current_rank;
+			}
+		}
+		rank.swap(new_rank);
+	}
+	return sa;
+}
+
 #endif

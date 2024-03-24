@@ -112,3 +112,10 @@ TEST_CASE("ac automation count matches", "[string]") {
 	REQUIRE(ac.count_all_matches("abdabd") == 0);
 	REQUIRE(ac.count_all_matches("ab") == 0);
 }
+
+TEST_CASE("suffix array construction", "[string]") {
+	REQUIRE(suffix_array("ababba") == std::vector<int>{5, 0, 2, 4, 1, 3});
+	REQUIRE(suffix_array("aaaa") == std::vector<int>{3, 2, 1, 0});
+	REQUIRE(suffix_array("ppppplppp") ==
+	        std::vector<int>{5, 8, 4, 7, 3, 6, 2, 1, 0});
+}
