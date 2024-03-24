@@ -341,21 +341,20 @@ template <class Charset = charset::lower>
 std::vector<int> suffix_array(const std::string &s) {
 	Charset charset;
 	int n = s.size();
-	std::vector<int> sa(n);
-	std::vector<int> rank(n);
-	// initailize suffix array, rank is equal to the index of the character
-	// in the charset
-	for (int i = 0; i < n; i++)
-		sa[i] = i, rank[i] = charset.to_index(s[i]);
-	// sort s[i..i + w - 1] for w = 1, 2, 4, 8, ...
-	// compare (rank[i], rank[i + w / 2])
-	for (int w = 1; w < n; w += w) {
-		auto proj = [&](int i) {
-			return std::make_pair(rank[i], i + w < n ? rank[i + w] : -1);
-		};
-		// O(n log n) sorting with std::sort
-		std::ranges::sort(sa, std::ranges::less{}, proj);
-		// update rank
+	// helper functions
+	auto count_sort = [&n](std::vector<int> &a, int mx, auto &&proj) {
+		std::vector<int> cnt(mx);
+		for (int x : a)
+			cnt[proj(x)]++;
+		for (int i = 1; i < mx; i++)
+			cnt[i] += cnt[i - 1];
+		std::vector<int> b(n);
+		for (int i = n - 1; i >= 0; i--)
+			b[--cnt[proj(a[i])]] = a[i];
+		a.swap(b);
+	};
+	auto update_rank = [&n](std::vector<int> &rank, const std::vector<int> &sa,
+	                        auto &&proj) {
 		std::vector<int> new_rank(rank.size());
 		int current_rank = 0;
 		new_rank[sa[0]] = current_rank;
@@ -367,6 +366,27 @@ std::vector<int> suffix_array(const std::string &s) {
 			}
 		}
 		rank.swap(new_rank);
+	};
+
+	std::vector<int> sa(n);
+	std::vector<int> rank(n);
+
+	// initailize suffix array, rank is equal to the index of the character
+	// in the charset
+	for (int i = 0; i < n; i++)
+		sa[i] = i, rank[i] = charset.to_index(s[i]);
+	count_sort(sa, charset.size(), [&](int x) { return rank[x]; });
+	update_rank(rank, sa, [&](int x) { return rank[x]; });
+
+	// sort s[i..i + w - 1] for w = 1, 2, 4, 8, ...
+	// compare (rank[i], rank[i + w / 2])
+	for (int w = 1; w < n; w += w) {
+		count_sort(sa, n + 1,
+		           [&](int i) { return i + w < n ? rank[i + w] + 1 : 0; });
+		count_sort(sa, n, [&](int i) { return rank[i]; });
+		update_rank(rank, sa, [&](int i) {
+			return std::make_pair(rank[i], i + w < n ? rank[i + w] : -1);
+		});
 	}
 	return sa;
 }
