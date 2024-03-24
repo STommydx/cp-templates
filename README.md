@@ -27,6 +27,7 @@ Welcome to my Competitive Programming Templates repository. Here, you'll find a 
 
 - [Aho-Corasick Algorithm](string.hpp)
 - [KMP](string.hpp)
+- [Suffix Array](string.hpp)
 - [Trie](string.hpp)
 
 ### Mathematics

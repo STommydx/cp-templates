@@ -337,24 +337,30 @@ class ac_automation : trie<magic_vector<size_t>, size_t, std::plus<>, Charset> {
 	}
 };
 
+/**
+ * Implementation based on O(n lg n) algorithm from OI wiki
+ * https://oi-wiki.org/string/sa/#onlogn-%E5%81%9A%E6%B3%95
+ */
 template <class Charset = charset::lower>
 std::vector<int> suffix_array(const std::string &s) {
 	Charset charset;
 	int n = s.size();
+	int m = charset.size(); // storing max_element of rank + 1
+
 	// helper functions
-	auto count_sort = [&n](std::vector<int> &a, int mx, auto &&proj) {
-		std::vector<int> cnt(mx);
+	auto count_sort = [&n, &m](std::vector<int> &a, auto &&proj) {
+		std::vector<int> cnt(m);
 		for (int x : a)
 			cnt[proj(x)]++;
-		for (int i = 1; i < mx; i++)
+		for (int i = 1; i < m; i++)
 			cnt[i] += cnt[i - 1];
 		std::vector<int> b(n);
 		for (int i = n - 1; i >= 0; i--)
 			b[--cnt[proj(a[i])]] = a[i];
 		a.swap(b);
 	};
-	auto update_rank = [&n](std::vector<int> &rank, const std::vector<int> &sa,
-	                        auto &&proj) {
+	auto update_rank = [&n, &m](std::vector<int> &rank,
+	                            const std::vector<int> &sa, auto &&proj) {
 		std::vector<int> new_rank(rank.size());
 		int current_rank = 0;
 		new_rank[sa[0]] = current_rank;
@@ -366,6 +372,7 @@ std::vector<int> suffix_array(const std::string &s) {
 			}
 		}
 		rank.swap(new_rank);
+		m = current_rank + 1;
 	};
 
 	std::vector<int> sa(n);
@@ -375,15 +382,32 @@ std::vector<int> suffix_array(const std::string &s) {
 	// in the charset
 	for (int i = 0; i < n; i++)
 		sa[i] = i, rank[i] = charset.to_index(s[i]);
-	count_sort(sa, charset.size(), [&](int x) { return rank[x]; });
+	count_sort(sa, [&](int x) { return rank[x]; });
 	update_rank(rank, sa, [&](int x) { return rank[x]; });
 
 	// sort s[i..i + w - 1] for w = 1, 2, 4, 8, ...
 	// compare (rank[i], rank[i + w / 2])
 	for (int w = 1; w < n; w += w) {
-		count_sort(sa, n + 1,
-		           [&](int i) { return i + w < n ? rank[i + w] + 1 : 0; });
-		count_sort(sa, n, [&](int i) { return rank[i]; });
+
+		// sort by rank[i + w], with constant optimization proposed by OI wiki
+		// put all sa[i] + w >= n to the front of sa (as those are considered
+		// as out of range, i.e. smallest priority)
+		// then the remaining follows the original order
+		std::vector<int> new_sa;
+		new_sa.reserve(n);
+		for (int i = n - w; i < n; i++)
+			new_sa.push_back(i);
+		for (int i = 0; i < n; i++)
+			if (sa[i] >= w)
+				new_sa.push_back(sa[i] - w);
+		sa.swap(new_sa);
+		// equivalent to
+		// count_sort(sa, [&](int i) { return i + w < n ? rank[i + w] + 1 : 0;
+		// });
+
+		// sort by rank[i]
+		count_sort(sa, [&](int i) { return rank[i]; });
+
 		update_rank(rank, sa, [&](int i) {
 			return std::make_pair(rank[i], i + w < n ? rank[i + w] : -1);
 		});
