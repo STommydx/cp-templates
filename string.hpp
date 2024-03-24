@@ -86,6 +86,15 @@ struct alnum {
 	}
 	constexpr size_t size() const { return 62; }
 };
+/**
+ * Total of 95 printable ASCII characters
+ * https://en.wikipedia.org/wiki/ASCII#Printable_characters
+ */
+struct ascii {
+	constexpr size_t to_index(char c) const { return c - 32; }
+	constexpr char to_char(size_t i) const { return i + 32; }
+	constexpr size_t size() const { return 95; }
+};
 }; // namespace charset
 
 template <class T, class U = T, class UpdateOp = std::plus<>,
