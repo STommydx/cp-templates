@@ -8,9 +8,13 @@
 
 #include <array>
 #include <cctype>
+#include <memory>
 #include <queue>
 #include <ranges>
 #include <vector>
+
+#include "functional.hpp"
+#include "utilities.hpp"
 
 std::vector<int> prefix_function(std::ranges::random_access_range auto &&s) {
 	std::vector<int> pi(std::ranges::size(s));
@@ -85,22 +89,74 @@ struct alnum {
 };
 }; // namespace charset
 
-template <class Charset = charset::lower> class trie {
+template <class T, class U = T, class UpdateOp = std::plus<>,
+          class Charset = charset::lower>
+class trie {
   protected:
 	std::vector<std::array<size_t, Charset{}.size()>> tr;
-	std::vector<size_t> cnt;
-	std::vector<size_t> cnt_prefix;
+	std::vector<T> dat;
 
 	size_t root;
+	UpdateOp op;
 	Charset charset;
 
-  private:
+  public:
+	static constexpr size_t npos = -1;
+
+  protected:
 	size_t create_node() {
 		tr.emplace_back();
 		tr.back().fill(0);
-		cnt.push_back(0);
-		cnt_prefix.push_back(0);
+		dat.emplace_back();
 		return tr.size() - 1;
+	}
+
+  public:
+	trie() { root = create_node(); }
+
+	T query(const std::string &s) const {
+		size_t u = find(s);
+		if (u == npos)
+			return T();
+		return dat[u];
+	}
+
+	void modify(const std::string &s, size_t val) {
+		size_t u = root;
+		for (char c : s) {
+			size_t v = charset.to_index(c);
+			if (!tr[u][v]) {
+				tr[u][v] = create_node();
+			}
+			u = tr[u][v];
+		}
+		dat[u] = op(dat[u], val);
+	}
+
+	size_t find(const std::string &s) const {
+		size_t u = root;
+		for (char c : s) {
+			size_t v = charset.to_index(c);
+			if (!tr[u][v])
+				return npos;
+			u = tr[u][v];
+		}
+		return u;
+	}
+};
+
+template <class Charset = charset::lower>
+class ordered_trie : trie<size_t, size_t, std::plus<>, Charset> {
+	using trie<size_t, size_t, std::plus<>, Charset>::tr;
+	using trie<size_t, size_t, std::plus<>, Charset>::dat;
+	using trie<size_t, size_t, std::plus<>, Charset>::root;
+	using trie<size_t, size_t, std::plus<>, Charset>::charset;
+	std::vector<size_t> cnt_prefix;
+
+	size_t create_node() {
+		auto r = trie<size_t, size_t, std::plus<>, Charset>::create_node();
+		cnt_prefix.emplace_back();
+		return r;
 	}
 
 	template <bool erase> void modify(const std::string &s, size_t val) {
@@ -121,13 +177,17 @@ template <class Charset = charset::lower> class trie {
 				cnt_prefix[u] += val;
 		}
 		if constexpr (erase)
-			cnt[u] -= val;
+			dat[u] -= val;
 		else
-			cnt[u] += val;
+			dat[u] += val;
 	}
 
   public:
-	trie() { root = create_node(); }
+	using trie<size_t, size_t, std::plus<>, Charset>::npos;
+
+	ordered_trie() : trie<size_t, size_t, std::plus<>, Charset>() {
+		cnt_prefix.emplace_back();
+	}
 
 	void insert(const std::string &s, size_t count = 1) {
 		modify<false>(s, count);
@@ -138,24 +198,13 @@ template <class Charset = charset::lower> class trie {
 	}
 
 	size_t count(const std::string &s) const {
-		size_t u = root;
-		for (char c : s) {
-			size_t v = charset.to_index(c);
-			if (!tr[u][v])
-				return 0;
-			u = tr[u][v];
-		}
-		return cnt[u];
+		return trie<size_t, size_t, std::plus<>, Charset>::query(s);
 	}
 
 	size_t count_prefix(const std::string &s) const {
-		size_t u = root;
-		for (char c : s) {
-			size_t v = charset.to_index(c);
-			if (!tr[u][v])
-				return 0;
-			u = tr[u][v];
-		}
+		auto u = trie<size_t, size_t, std::plus<>, Charset>::find(s);
+		if (u == npos)
+			return 0;
 		return cnt_prefix[u];
 	}
 
@@ -163,7 +212,7 @@ template <class Charset = charset::lower> class trie {
 		size_t u = root;
 		size_t ans = 0;
 		for (char c : s) {
-			ans += cnt[u];
+			ans += dat[u];
 			size_t v = charset.to_index(c);
 			for (size_t i = 0; i < v; i++) {
 				if (tr[u][i])
@@ -180,10 +229,10 @@ template <class Charset = charset::lower> class trie {
 		size_t u = root;
 		std::string ans;
 		while (k < cnt_prefix[u]) {
-			if (k < cnt[u]) {
+			if (k < dat[u]) {
 				break;
 			}
-			k -= cnt[u];
+			k -= dat[u];
 			size_t i = 0;
 			for (; i < charset.size(); i++) {
 				if (tr[u][i]) {
@@ -203,19 +252,27 @@ template <class Charset = charset::lower> class trie {
 };
 
 template <class Charset = charset::lower>
-class ac_automation : public trie<Charset> {
+class ac_automation : trie<magic_vector<size_t>, size_t, std::plus<>, Charset> {
+	size_t m;
 	std::vector<size_t> fail;
+	std::vector<size_t> topo_order;
 
-	using trie<Charset>::tr;
-	using trie<Charset>::cnt;
-	using trie<Charset>::root;
-	using trie<Charset>::charset;
+	using trie<magic_vector<size_t>, size_t, std::plus<>, Charset>::tr;
+	using trie<magic_vector<size_t>, size_t, std::plus<>, Charset>::dat;
+	using trie<magic_vector<size_t>, size_t, std::plus<>, Charset>::root;
+	using trie<magic_vector<size_t>, size_t, std::plus<>, Charset>::charset;
 
   public:
-	ac_automation() : trie<Charset>() {}
-
-	void build() {
+	ac_automation(const std::vector<std::string> &patterns)
+	    : trie<magic_vector<size_t>, size_t, std::plus<>, Charset>(),
+	      m(patterns.size()) {
+		for (size_t i = 0; i < m; i++) {
+			trie<magic_vector<size_t>, size_t, std::plus<>, Charset>::modify(
+			    patterns[i], i);
+		}
+		// build failure graph
 		fail.assign(tr.size(), 0);
+		std::vector<size_t> in_degree(tr.size());
 		std::queue<size_t> q;
 		for (size_t i = 0; i < charset.size(); i++) {
 			if (tr[root][i]) {
@@ -229,27 +286,55 @@ class ac_automation : public trie<Charset> {
 			for (size_t i = 0; i < charset.size(); i++) {
 				if (tr[u][i]) {
 					fail[tr[u][i]] = tr[fail[u]][i];
+					in_degree[fail[tr[u][i]]]++;
 					q.push(tr[u][i]);
 				} else {
 					tr[u][i] = tr[fail[u]][i];
 				}
 			}
 		}
+		// topological sort on failure graph
+		for (size_t i = 0; i < tr.size(); i++) {
+			if (in_degree[i] == 0) {
+				q.push(i);
+			}
+		}
+		while (!q.empty()) {
+			size_t u = q.front();
+			q.pop();
+			topo_order.push_back(u);
+			if (size_t v = fail[u]; !--in_degree[v]) {
+				q.push(v);
+			}
+		}
 	}
 
-	size_t count_matches(const std::string &s) const {
-		std::vector<size_t> ans_cnt(cnt);
+	size_t count_all_matches(const std::string &s) const {
+		auto result = count_matches(s);
 		size_t ans = 0;
+		for (auto r : result) {
+			ans += r > 0;
+		}
+		return ans;
+	}
+
+	std::vector<size_t> count_matches(const std::string &s) const {
+		std::vector<size_t> match_cnt(tr.size());
 		size_t u = root;
 		for (char c : s) {
 			int v = charset.to_index(c);
 			u = tr[u][v];
-			for (size_t t = u; t && ans_cnt[t]; t = fail[t]) {
-				ans += ans_cnt[t];
-				ans_cnt[t] = 0;
-			}
+			match_cnt[u]++;
 		}
-		return ans;
+		std::vector<size_t> result(m);
+		for (size_t u : topo_order) {
+			for (size_t id : dat[u]) {
+				result[id] += match_cnt[u];
+			}
+			size_t v = fail[u];
+			match_cnt[v] += match_cnt[u];
+		}
+		return result;
 	}
 };
 

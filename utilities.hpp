@@ -143,4 +143,51 @@ compression_vector(Iter, Iter, SortCompare, UniqueCompare, Proj)
     -> compression_vector<std::iter_value_t<Iter>, SortCompare, UniqueCompare,
                           Proj>;
 
+/*
+ * Weird patch to make vector push_back usable in data structures in this
+ * template repository. The copy constructor is not available to prevent
+ * accidental costly copy operations.
+ */
+template <class T> struct magic_vector {
+	std::unique_ptr<std::vector<T>> ptr;
+
+	magic_vector() : ptr(new std::vector<T>()) {}
+	magic_vector(size_t n) : ptr(new std::vector<T>(n)) {}
+	magic_vector(size_t n, const T &x) : ptr(new std::vector<T>(n, x)) {}
+	magic_vector(magic_vector &&other) = default;
+	magic_vector &operator=(magic_vector &&other) = default;
+
+	magic_vector &&operator+(size_t x) {
+		ptr->push_back(x);
+		return std::move(*this);
+	}
+	magic_vector &&operator+(magic_vector &&other) {
+		if (size() < other.size()) {
+			ptr.swap(other.ptr);
+		}
+		std::copy(other.ptr->begin(), other.ptr->end(),
+		          std::back_inserter(*ptr));
+	}
+	std::vector<T> &operator*() { return *this; }
+
+	T &operator[](size_t i) { return ptr->at(i); }
+	T &front() { return ptr->front(); }
+	const T &front() const { return ptr->front(); }
+	T &back() { return ptr->back(); }
+	const T &back() const { return ptr->back(); }
+	auto begin() { return ptr->begin(); }
+	auto begin() const { return ptr->begin(); }
+	auto end() { return ptr->end(); }
+	auto end() const { return ptr->end(); }
+	auto empty() const { return ptr->empty(); }
+	auto size() const { return ptr->size(); }
+	void clear() { ptr->clear(); }
+	template <class Arg> void push_back(Arg &&x) {
+		ptr->push_back(std::forward<Arg>(x));
+	}
+	template <class... Args> void emplace_back(Args &&...args) {
+		ptr->emplace_back(std::forward<Args>(args)...);
+	}
+};
+
 #endif

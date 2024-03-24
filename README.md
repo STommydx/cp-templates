@@ -25,6 +25,7 @@ Welcome to my Competitive Programming Templates repository. Here, you'll find a 
 
 ### String Algorithms
 
+- [Aho-Corasick Algorithm](string.hpp)
 - [KMP](string.hpp)
 - [Trie](string.hpp)
 

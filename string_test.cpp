@@ -76,8 +76,8 @@ TEST_CASE("charset conversions behave as expected", "[string]") {
 	}
 }
 
-TEST_CASE("trie behaves as expected", "[string]") {
-	trie t;
+TEST_CASE("ordered trie behaves as expected", "[string]") {
+	ordered_trie t;
 	t.insert("ababa");
 	t.insert("ababa");
 	t.insert("aba");
@@ -104,16 +104,11 @@ TEST_CASE("trie behaves as expected", "[string]") {
 }
 
 TEST_CASE("ac automation count matches", "[string]") {
-	ac_automation ac;
-	ac.insert("aba");
-	ac.insert("aba");
-	ac.insert("bcd");
-	ac.insert("acba");
-	ac.insert("babc");
-	ac.build();
-	REQUIRE(ac.count_matches("ababaca") == 2);
-	REQUIRE(ac.count_matches("abababc") == 3);
-	REQUIRE(ac.count_matches("babcd") == 2);
-	REQUIRE(ac.count_matches("abdabd") == 0);
-	REQUIRE(ac.count_matches("ab") == 0);
+	std::vector<std::string> patterns = {"aba", "aba", "bcd", "acba", "babc"};
+	ac_automation<> ac(patterns);
+	REQUIRE(ac.count_all_matches("ababaca") == 2);
+	REQUIRE(ac.count_all_matches("abababc") == 3);
+	REQUIRE(ac.count_all_matches("babcd") == 2);
+	REQUIRE(ac.count_all_matches("abdabd") == 0);
+	REQUIRE(ac.count_all_matches("ab") == 0);
 }
