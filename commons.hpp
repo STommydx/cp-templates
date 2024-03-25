@@ -51,6 +51,23 @@ constexpr std::pair<T, U> INFTY<std::pair<T, U>>{INFTY<T>, INFTY<U>};
 /**
  * IO helper functions.
  */
+template <class T>
+std::ostream &operator<<(std::ostream &os, const std::vector<T> &r);
+template <class T>
+std::ostream &operator<<(std::ostream &os, const std::deque<T> &r);
+template <class T>
+std::ostream &operator<<(std::ostream &os,
+                         const std::vector<std::vector<T>> &r);
+template <class T1, class T2>
+std::ostream &operator<<(std::ostream &os,
+                         const std::vector<std::pair<T1, T2>> &r);
+template <class... Ts>
+std::ostream &operator<<(std::ostream &os,
+                         const std::vector<std::tuple<Ts...>> &r);
+template <class T1, class T2>
+std::ostream &operator<<(std::ostream &os, const std::pair<T1, T2> &p);
+template <class... Ts>
+std::ostream &operator<<(std::ostream &os, const std::tuple<Ts...> &t);
 template <std::ranges::input_range R>
 std::ostream &print_range(std::ostream &os, R &&r, char delimiter = ' ');
 template <class T, std::size_t... Is>
@@ -106,6 +123,10 @@ std::ostream &print_tuple(std::ostream &os, const T &t,
 	return os;
 }
 
+template <class T1, class T2>
+std::istream &operator>>(std::istream &is, std::pair<T1, T2> &x);
+template <class... Ts>
+std::istream &operator>>(std::istream &is, std::tuple<Ts...> &t);
 template <class T, std::size_t... Is>
 std::istream &read_tuple(std::istream &is, T &t, std::index_sequence<Is...>);
 
