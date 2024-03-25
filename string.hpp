@@ -441,7 +441,8 @@ std::vector<int> build_lcp(std::ranges::random_access_range auto &&s,
 			continue;
 		if (h)
 			h--;
-		while (s[i + h] == s[sa[rank[i] - 1] + h])
+		int j = sa[rank[i] - 1];
+		while (i + h < n && j + h < n && s[i + h] == s[j + h])
 			h++;
 		lcp[rank[i]] = h;
 	}
