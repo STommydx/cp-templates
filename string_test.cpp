@@ -134,4 +134,9 @@ TEST_CASE("suffix array applications", "[string]") {
 	REQUIRE(sa.count_unique_substrings() == 15);
 	REQUIRE(sa.count("ab") == 2);
 	REQUIRE(std::ranges::equal(sa.equal_range("ab"), std::vector<int>{0, 2}));
+	auto lcp_table = sa.longest_common_prefix();
+	REQUIRE(lcp_table.query(0, 2) == 2);
+	REQUIRE(lcp_table.query(1, 3) == 1);
+	REQUIRE(lcp_table.query(1, 4) == 2);
+	REQUIRE(lcp_table.query(2, 2) == 4);
 }

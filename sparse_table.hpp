@@ -26,7 +26,7 @@ template <class T, class Op = std::bit_or<>> class sparse_table {
 		}
 	}
 
-	T query(size_t l, size_t r) {
+	T query(size_t l, size_t r) const {
 		int j = std::bit_width(r - l + 1) - 1;
 		return op(dp[j][l], dp[j][r + 1 - (1 << j)]);
 	}

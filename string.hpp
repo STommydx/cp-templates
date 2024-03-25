@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "functional.hpp"
+#include "sparse_table.hpp"
 #include "utilities.hpp"
 
 std::vector<int> prefix_function(std::ranges::random_access_range auto &&s) {
@@ -448,8 +449,9 @@ std::vector<int> build_lcp(const std::string &s, const std::vector<int> &sa,
 	return lcp;
 }
 
+template <class Charset = charset::lower>
 std::vector<int> build_lcp(const std::string &s) {
-	auto [sa, rank] = build_suffix_array(s);
+	auto [sa, rank] = build_suffix_array<Charset>(s);
 	return build_lcp(s, sa, rank);
 }
 
@@ -471,7 +473,7 @@ class suffix_array : public std::vector<int> {
 	             const std::vector<int> &rank)
 	    : suffix_array(s, sa, rank, build_lcp(s, sa, rank)) {}
 	suffix_array(const std::string &s)
-	    : suffix_array(s, build_suffix_array(s)) {}
+	    : suffix_array(s, build_suffix_array<Charset>(s)) {}
 
 	// accessors
 	std::string &str() { return s; }
@@ -490,6 +492,27 @@ class suffix_array : public std::vector<int> {
 			ans -= lcp_i;
 		}
 		return ans;
+	}
+
+	class longest_common_prefix_table {
+		const suffix_array &parent;
+		sparse_table<int, fn::minimum<>> st;
+
+	  public:
+		longest_common_prefix_table(const suffix_array &parent)
+		    : parent(parent), st(parent.lcp) {}
+		int query(int l, int r) const {
+			if (l == r)
+				return parent.s.size() - l;
+			int rl = parent.rank[l], rr = parent.rank[r];
+			if (rl > rr)
+				std::swap(rl, rr);
+			return st.query(rl + 1, rr);
+		}
+	};
+
+	longest_common_prefix_table longest_common_prefix() const {
+		return longest_common_prefix_table(*this);
 	}
 
 	/**
