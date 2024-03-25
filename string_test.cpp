@@ -115,17 +115,19 @@ TEST_CASE("ac automation count matches", "[string]") {
 }
 
 TEST_CASE("suffix array construction", "[string]") {
-	REQUIRE(build_suffix_array("ababba").first ==
+	using namespace std::literals;
+	REQUIRE(build_suffix_array("ababba"s).first ==
 	        std::vector<int>{5, 0, 2, 4, 1, 3});
-	REQUIRE(build_suffix_array("aaaa").first == std::vector<int>{3, 2, 1, 0});
-	REQUIRE(build_suffix_array("ppppplppp").first ==
+	REQUIRE(build_suffix_array("aaaa"s).first == std::vector<int>{3, 2, 1, 0});
+	REQUIRE(build_suffix_array("ppppplppp"s).first ==
 	        std::vector<int>{5, 8, 4, 7, 3, 6, 2, 1, 0});
 }
 
 TEST_CASE("lcp construction", "[string]") {
-	REQUIRE(build_lcp("ababba") == std::vector<int>{0, 1, 2, 0, 2, 1});
-	REQUIRE(build_lcp("aaaa") == std::vector<int>{0, 1, 2, 3});
-	REQUIRE(build_lcp("ppppplppp") ==
+	using namespace std::literals;
+	REQUIRE(build_lcp("ababba"s) == std::vector<int>{0, 1, 2, 0, 2, 1});
+	REQUIRE(build_lcp("aaaa"s) == std::vector<int>{0, 1, 2, 3});
+	REQUIRE(build_lcp("ppppplppp"s) ==
 	        std::vector<int>{0, 0, 1, 1, 2, 2, 3, 3, 4});
 }
 
@@ -139,4 +141,9 @@ TEST_CASE("suffix array applications", "[string]") {
 	REQUIRE(lcp_table.query(1, 3) == 1);
 	REQUIRE(lcp_table.query(1, 4) == 2);
 	REQUIRE(lcp_table.query(2, 2) == 4);
+	REQUIRE(lcp_table.substr_cmp(0, 2, 2, 2) == 0);
+	REQUIRE(lcp_table.substr_cmp(0, 3, 2, 3) < 0);
+	REQUIRE(lcp_table.substr_cmp(0, 5, 0, 3) > 0);
+	REQUIRE(lcp_table.substr_cmp(1, 4, 0, 3) > 0);
+	REQUIRE(lcp_table.substr_cmp(1, 2, 4, 2) == 0);
 }

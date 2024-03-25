@@ -352,12 +352,10 @@ class ac_automation : trie<magic_vector<size_t>, size_t, std::plus<>, Charset> {
  * Implementation based on O(n lg n) algorithm from OI wiki
  * https://oi-wiki.org/string/sa/#onlogn-%E5%81%9A%E6%B3%95
  */
-template <class Charset = charset::lower>
 std::pair<std::vector<int>, std::vector<int>>
-build_suffix_array(const std::string &s) {
-	Charset charset;
-	int n = s.size();
-	int m = charset.size(); // storing max_element of rank + 1
+build_suffix_array(std::ranges::random_access_range auto &&s) {
+	int n = std::ranges::size(s);
+	int m = *std::ranges::max_element(s) + 1;
 
 	// helper functions
 	auto count_sort = [&n, &m](std::vector<int> &a, auto &&proj) {
@@ -393,7 +391,7 @@ build_suffix_array(const std::string &s) {
 	// initailize suffix array, rank is equal to the index of the character
 	// in the charset
 	for (int i = 0; i < n; i++)
-		sa[i] = i, rank[i] = charset.to_index(s[i]);
+		sa[i] = i, rank[i] = s[i];
 	count_sort(sa, [&](int x) { return rank[x]; });
 	update_rank(rank, sa, [&](int x) { return rank[x]; });
 
@@ -432,9 +430,10 @@ build_suffix_array(const std::string &s) {
 	return {std::move(sa), std::move(rank)};
 }
 
-std::vector<int> build_lcp(const std::string &s, const std::vector<int> &sa,
+std::vector<int> build_lcp(std::ranges::random_access_range auto &&s,
+                           const std::vector<int> &sa,
                            const std::vector<int> &rank) {
-	int n = s.size();
+	int n = std::ranges::size(s);
 	std::vector<int> lcp(n);
 	int h = 0;
 	for (int i = 0; i < n; i++) {
@@ -449,13 +448,12 @@ std::vector<int> build_lcp(const std::string &s, const std::vector<int> &sa,
 	return lcp;
 }
 
-template <class Charset = charset::lower>
-std::vector<int> build_lcp(const std::string &s) {
-	auto [sa, rank] = build_suffix_array<Charset>(s);
-	return build_lcp(s, sa, rank);
+template <std::ranges::random_access_range R>
+std::vector<int> build_lcp(R &&s) {
+	auto [sa, rank] = build_suffix_array(std::forward<R>(s));
+	return build_lcp(std::forward<R>(s), sa, rank);
 }
 
-template <class Charset = charset::lower>
 class suffix_array : public std::vector<int> {
 	std::string s;
 	std::vector<int> rank;
@@ -473,7 +471,7 @@ class suffix_array : public std::vector<int> {
 	             const std::vector<int> &rank)
 	    : suffix_array(s, sa, rank, build_lcp(s, sa, rank)) {}
 	suffix_array(const std::string &s)
-	    : suffix_array(s, build_suffix_array<Charset>(s)) {}
+	    : suffix_array(s, build_suffix_array(s)) {}
 
 	// accessors
 	std::string &str() { return s; }
@@ -508,6 +506,12 @@ class suffix_array : public std::vector<int> {
 			if (rl > rr)
 				std::swap(rl, rr);
 			return st.query(rl + 1, rr);
+		}
+		auto substr_cmp(int s_l, int s_size, int t_l, int t_size) const {
+			int lcp_st = query(s_l, t_l);
+			if (lcp_st >= s_size || lcp_st >= t_size)
+				return s_size <=> t_size;
+			return parent.rank[s_l] <=> parent.rank[t_l];
 		}
 	};
 
