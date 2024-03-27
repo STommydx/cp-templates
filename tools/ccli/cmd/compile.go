@@ -51,5 +51,5 @@ func init() {
 	rootCmd.AddCommand(compileCmd)
 	compileCmd.Flags().StringVarP(&outputPath, "output", "o", "", "Output file path")
 	compileCmd.Flags().StringVarP(&submissionPath, "submission", "s", "", "Submission file path")
-	compileCmd.Flags().StringVarP(&compilationFlags, "flag", "f", "-std=c++20 -Wall -Wextra -g", "Compilation flags")
+	compileCmd.Flags().StringVarP(&compilationFlags, "flag", "f", "-std=c++20 -Wall -Wextra -g -fsanitize=address -fsanitize=undefined", "Compilation flags")
 }
