@@ -45,8 +45,8 @@ template <> constexpr int INFTY<int> = 0x3f3f3f3f;
 template <> constexpr ll INFTY<ll> = 0x3f3f3f3f3f3f3f3fLL;
 template <class T, class U>
 constexpr std::pair<T, U> INFTY<std::pair<T, U>>{INFTY<T>, INFTY<U>};
-constexpr int INF = INFTY<>;
-constexpr ll BINF = INFTY<ll>;
+[[maybe_unused]] constexpr int INF = INFTY<>;
+[[maybe_unused]] constexpr ll BINF = INFTY<ll>;
 
 /**
  * IO helper functions.
