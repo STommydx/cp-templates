@@ -130,3 +130,46 @@ TEST_CASE("IO operator overload works for common cp types", "[commons]") {
 		REQUIRE(ss.str() == "1 22 3.3\n4444 55555 6.6\n666666 7777777 8.8");
 	}
 }
+
+TEST_CASE("I/O for 1-based indices", "[commons]") {
+	SECTION("vector of 1-based indices") {
+		std::stringstream ss;
+		std::vector<int> p{3, 0, 2, 1};
+		ss << put_indices(p);
+		REQUIRE(ss.str() == "4 1 3 2");
+		std::vector<int> p2(4);
+		ss >> get_indices(p2);
+		REQUIRE(p == p2);
+	}
+	SECTION("2D vector of 1-based indices") {
+		std::stringstream ss;
+		std::vector<std::vector<int>> v{{1, 2, 3, 4}, {5, 6, 7, 8}};
+		ss << put_indices(v);
+		REQUIRE(ss.str() == "2 3 4 5\n6 7 8 9");
+		std::vector<std::vector<int>> v2(2, std::vector<int>(4));
+		ss >> get_indices(v2);
+		REQUIRE(v == v2);
+	}
+	SECTION("vector of pairs of 1-based indices") {
+		std::stringstream ss;
+		std::vector<std::pair<int, int>> p{{3, 0}, {0, 2}, {2, 1}};
+		ss << put_indices(p);
+		REQUIRE(ss.str() == "4 1\n1 3\n3 2");
+		std::vector<std::pair<int, int>> p2(3);
+		ss >> get_indices(p2);
+		REQUIRE(p == p2);
+	}
+	SECTION("vector of vector of tuples of 1-based indices") {
+		std::stringstream ss;
+		std::vector<std::vector<std::tuple<int, int, int>>> v{
+		    {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}},
+		    {{10, 11, 12}, {13, 14, 15}, {16, 17, 18}}};
+		ss << put_indices(v);
+		REQUIRE(ss.str() ==
+		        "2 3 4\n5 6 7\n8 9 10\n11 12 13\n14 15 16\n17 18 19");
+		std::vector<std::vector<std::tuple<int, int, int>>> v2(
+		    2, std::vector<std::tuple<int, int, int>>(3));
+		ss >> get_indices(v2);
+		REQUIRE(v == v2);
+	}
+}
