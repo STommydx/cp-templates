@@ -148,24 +148,41 @@ TEST_CASE("topological sort on graph with cycles", "[graph]") {
 
 TEST_CASE("IO for unweighted graph", "[graph]") {
 	std::stringstream ss{"1 2\n2 3\n3 1\n3 4"};
-	graph<> g = read_unweighted_graph(ss, 4, 4);
+	graph<> g(4);
+	ss >> get_graph(g, 4);
 	REQUIRE(g.get_in_degree() == std::vector<int>{1, 1, 1, 1});
 	REQUIRE(g.get_out_degree() == std::vector<int>{1, 1, 2, 0});
 	std::stringstream bi_ss{"1 2\n2 3\n3 1\n3 4"};
-	graph<> bi_g = read_unweighted_graph<false>(bi_ss, 4, 4);
+	graph<> bi_g(4);
+	bi_ss >> get_undirected_graph(bi_g, 4);
 	REQUIRE(bi_g.get_in_degree() == std::vector<int>{2, 2, 3, 1});
 	REQUIRE(bi_g.get_out_degree() == std::vector<int>{2, 2, 3, 1});
 }
 
 TEST_CASE("IO for weighted graph", "[graph]") {
 	std::stringstream ss{"1 2 4\n2 3 1\n3 1 5\n3 4 8"};
-	graph<> g = read_graph<int>(ss, 4, 4);
+	graph<int> g(4);
+	ss >> get_graph(g, 4);
 	REQUIRE(g.get_in_degree() == std::vector<int>{1, 1, 1, 1});
 	REQUIRE(g.get_out_degree() == std::vector<int>{1, 1, 2, 0});
 	std::stringstream bi_ss{"1 2 4\n2 3 1\n3 1 5\n3 4 8"};
-	graph<> bi_g = read_graph<int, false>(bi_ss, 4, 4);
+	graph<int> bi_g(4);
+	bi_ss >> get_undirected_graph(bi_g, 4);
 	REQUIRE(bi_g.get_in_degree() == std::vector<int>{2, 2, 3, 1});
 	REQUIRE(bi_g.get_out_degree() == std::vector<int>{2, 2, 3, 1});
+}
+
+TEST_CASE("IO for tree", "[graph]") {
+	std::stringstream ss{"1 2\n2 3\n3 4"};
+	graph<> g(4);
+	ss >> get_tree(g);
+	REQUIRE(g.get_in_degree() == std::vector<int>{0, 1, 1, 1});
+	REQUIRE(g.get_out_degree() == std::vector<int>{1, 1, 1, 0});
+	std::stringstream bi_ss{"1 2 5\n2 3 1\n3 4 0"};
+	graph<int> bi_g(4);
+	bi_ss >> get_undirected_tree(bi_g);
+	REQUIRE(bi_g.get_in_degree() == std::vector<int>{1, 2, 2, 1});
+	REQUIRE(bi_g.get_out_degree() == std::vector<int>{1, 2, 2, 1});
 }
 
 TEST_CASE("building connected components", "[graph]") {

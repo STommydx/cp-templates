@@ -215,20 +215,6 @@ template <> class graph<void> : public std::vector<std::vector<int>> {
 	}
 };
 
-template <bool directed = true, int base = 1>
-graph<void> read_unweighted_graph(std::istream &is, int n, int m) {
-	graph<void> g(n);
-	for (int i = 0; i < m; i++) {
-		int u, v;
-		is >> u >> v;
-		u -= base, v -= base;
-		g.push_edge(u, v);
-		if constexpr (!directed)
-			g.push_edge(v, u);
-	}
-	return g;
-}
-
 template <class T> class graph : public graph<void> {
   public:
 	using edge = std::pair<std::pair<int, int>, T>;
@@ -277,20 +263,73 @@ template <class T> class graph : public graph<void> {
 	}
 };
 
-template <class T, bool directed = true, int base = 1>
-graph<T> read_graph(std::istream &is, int n, int m) {
-	graph<T> g(n);
-	for (int i = 0; i < m; i++) {
+/**
+ * c++ style I/O for graph similar to std::get_time, std::chrono::parse
+ */
+template <class T, bool directed = true, int base = 1> struct _get_graph {
+	graph<T> &g;
+	int m;
+};
+
+template <class T, bool directed, int base>
+std::istream &operator>>(std::istream &is,
+                         _get_graph<T, directed, base> get_g) {
+	for (int i = 0; i < get_g.m; i++) {
 		int u, v;
 		is >> u >> v;
 		u -= base, v -= base;
 		T t;
 		is >> t;
-		g.push_edge(u, v, t);
+		get_g.g.push_edge(u, v, t);
 		if constexpr (!directed)
-			g.push_edge(v, u, t);
+			get_g.g.push_edge(v, u, t);
 	}
-	return g;
+	return is;
+}
+
+template <bool directed, int base>
+std::istream &operator>>(std::istream &is,
+                         _get_graph<void, directed, base> get_g) {
+	for (int i = 0; i < get_g.m; i++) {
+		int u, v;
+		is >> u >> v;
+		u -= base, v -= base;
+		get_g.g.push_edge(u, v);
+		if constexpr (!directed)
+			get_g.g.push_edge(v, u);
+	}
+	return is;
+}
+
+template <class T, bool directed = true, int base = 1>
+_get_graph<T, directed, base> get_graph(graph<T> &g, int m) {
+	return _get_graph<T, directed, base>{g, m};
+}
+
+template <class T, int base = 1>
+_get_graph<T, true, base> get_directed_graph(graph<T> &g, int m) {
+	return _get_graph<T, true, base>{g, m};
+}
+
+template <class T, int base = 1>
+_get_graph<T, false, base> get_undirected_graph(graph<T> &g, int m) {
+	return _get_graph<T, false, base>{g, m};
+}
+
+template <class T, bool directed = true, int base = 1>
+_get_graph<T, directed, base> get_tree(graph<T> &g) {
+	return _get_graph<T, directed, base>{g,
+	                                     static_cast<int>(std::ssize(g) - 1)};
+}
+
+template <class T, int base = 1>
+_get_graph<T, true, base> get_directed_tree(graph<T> &g) {
+	return _get_graph<T, true, base>{g, static_cast<int>(std::ssize(g) - 1)};
+}
+
+template <class T, int base = 1>
+_get_graph<T, false, base> get_undirected_tree(graph<T> &g) {
+	return _get_graph<T, false, base>{g, static_cast<int>(std::ssize(g) - 1)};
 }
 
 template <class T = void, class Op = std::plus<>, bool VertexQuery = true>
