@@ -43,6 +43,10 @@ std::vector<int> kmp(const std::string &str, const std::string &pattern) {
 }
 
 namespace charset {
+constexpr bool isupper(char c) { return c >= 'A' && c <= 'Z'; }
+constexpr bool islower(char c) { return c >= 'a' && c <= 'z'; }
+constexpr bool isdigit(char c) { return c >= '0' && c <= '9'; }
+
 struct lower {
 	constexpr size_t to_index(char c) const { return c - 'a'; }
 	constexpr char to_char(size_t i) const { return 'a' + i; }
@@ -60,7 +64,7 @@ struct digit {
 };
 struct alpha {
 	constexpr size_t to_index(char c) const {
-		if (::std::isupper(c))
+		if (isupper(c))
 			return c - 'A';
 		return c - 'a' + 26;
 	}
@@ -73,9 +77,9 @@ struct alpha {
 };
 struct alnum {
 	constexpr size_t to_index(char c) const {
-		if (::std::isdigit(c))
+		if (isdigit(c))
 			return c - '0';
-		if (::std::isupper(c))
+		if (isupper(c))
 			return c - 'A' + 10;
 		return c - 'a' + 36;
 	}
