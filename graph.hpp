@@ -386,7 +386,7 @@ template <class Op, bool VertexQuery> class lca<void, Op, VertexQuery> {
 	    : lca(g.dfs_traversal(root)) {}
 
 	int kth_ancestor(int u, int k) const {
-		for (int j = 0; j < m && k > 0; j++, k >>= 1) {
+		for (size_t j = 0; j < m && k > 0; j++, k >>= 1) {
 			if (k & 1) {
 				u = dp[j][u];
 			}
