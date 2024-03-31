@@ -13,6 +13,8 @@
 #include <tuple>
 #include <vector>
 
+#include "io.hpp"
+
 template <class T = void> class graph;
 
 template <> class graph<void> : public std::vector<std::vector<int>> {
@@ -44,9 +46,20 @@ template <> class graph<void> : public std::vector<std::vector<int>> {
 		m++;
 	}
 
+	void push_undirected_edge(const edge &e) {
+		push_edge(e);
+		(*this)[e.second].push_back(e.first);
+		m++;
+	}
+
 	void push_edge(int u, int v) {
 		(*this)[u].push_back(v);
 		m++;
+	}
+
+	void push_undirected_edge(int u, int v) {
+		push_edge(u, v);
+		push_edge(v, u);
 	}
 
 	vector<int> get_in_degree() const {
@@ -231,9 +244,20 @@ template <class T> class graph : public graph<void> {
 		graph<void>::push_edge(e.first);
 	}
 
+	void push_undirected_edge(const edge &e) {
+		dat[e.first.first].push_back(e.second);
+		dat[e.first.second].push_back(e.second);
+		graph<void>::push_undirected_edge(e.first);
+	}
+
 	void push_edge(int u, int v, const T &t) {
 		dat[u].push_back(t);
 		graph<void>::push_edge(u, v);
+	}
+
+	void push_undirected_edge(int u, int v, const T &t) {
+		push_edge(u, v, t);
+		push_edge(v, u, t);
 	}
 
 	template <class... Args> void emplace_edge(int u, int v, Args &&...args) {
@@ -275,14 +299,12 @@ template <class T, bool directed, int base>
 std::istream &operator>>(std::istream &is,
                          _get_graph<T, directed, base> get_g) {
 	for (int i = 0; i < get_g.m; i++) {
-		int u, v;
-		is >> u >> v;
-		u -= base, v -= base;
-		T t;
-		is >> t;
-		get_g.g.push_edge(u, v, t);
-		if constexpr (!directed)
-			get_g.g.push_edge(v, u, t);
+		typename graph<T>::edge e;
+		is >> get_indices<std::pair<int, int>, base>(e.first) >> e.second;
+		if constexpr (directed)
+			get_g.g.push_edge(e);
+		else
+			get_g.g.push_undirected_edge(e);
 	}
 	return is;
 }
@@ -291,12 +313,12 @@ template <bool directed, int base>
 std::istream &operator>>(std::istream &is,
                          _get_graph<void, directed, base> get_g) {
 	for (int i = 0; i < get_g.m; i++) {
-		int u, v;
-		is >> u >> v;
-		u -= base, v -= base;
-		get_g.g.push_edge(u, v);
-		if constexpr (!directed)
-			get_g.g.push_edge(v, u);
+		graph<void>::edge e;
+		is >> get_indices<graph<void>::edge, base>(e);
+		if constexpr (directed)
+			get_g.g.push_edge(e);
+		else
+			get_g.g.push_undirected_edge(e);
 	}
 	return is;
 }

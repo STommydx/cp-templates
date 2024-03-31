@@ -8,6 +8,7 @@
 
 #include <iostream>
 #include <queue>
+#include <ranges>
 #include <vector>
 
 /**
