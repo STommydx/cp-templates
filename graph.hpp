@@ -114,7 +114,7 @@ template <> class graph<void> : public std::vector<std::vector<int>> {
 	connected_components_result get_connected_components() const {
 		const int uncolored = -1;
 		int total_colors = 0;
-		vector<int> color(n, uncolored);
+		std::vector<int> color(n, uncolored);
 		auto dfs = [&](auto &self, int u) -> void {
 			for (int v : (*this)[u]) {
 				if (color[v] == uncolored) {
@@ -139,8 +139,8 @@ template <> class graph<void> : public std::vector<std::vector<int>> {
 	using dfs_traversal_result = std::tuple<std::vector<int>, std::vector<int>,
 	                                        std::vector<int>, std::vector<int>>;
 	dfs_traversal_result dfs_traversal(int start_node = all_nodes) const {
-		vector<int> pre_order, post_order;
-		vector<int> depth(n, inf), parent(n, no_parent);
+		std::vector<int> pre_order, post_order;
+		std::vector<int> depth(n, inf), parent(n, no_parent);
 		auto dfs = [&](auto &self, int u) -> void {
 			pre_order.push_back(u);
 			for (int v : (*this)[u]) {
@@ -170,8 +170,8 @@ template <> class graph<void> : public std::vector<std::vector<int>> {
 	using bfs_traversal_result =
 	    std::tuple<std::vector<int>, std::vector<int>, std::vector<int>>;
 	bfs_traversal_result bfs_traversal(int start_node = all_nodes) const {
-		vector<int> order;
-		vector<int> distance(n, inf), parent(n, no_parent);
+		std::vector<int> order;
+		std::vector<int> distance(n, inf), parent(n, no_parent);
 		auto bfs = [&](int s) -> void {
 			std::queue<int> q;
 			q.push(s);
@@ -202,9 +202,9 @@ template <> class graph<void> : public std::vector<std::vector<int>> {
 	}
 
 	std::optional<std::vector<int>> topological_sort() const {
-		vector<int> in_degree = get_in_degree();
-		vector<int> result;
-		vector<int> q;
+		std::vector<int> in_degree = get_in_degree();
+		std::vector<int> result;
+		std::vector<int> q;
 		for (size_t i = 0; i < n; i++) {
 			if (in_degree[i] == 0) {
 				q.push_back(i);
@@ -284,6 +284,35 @@ template <class T> class graph : public graph<void> {
 			}
 		}
 		return res;
+	}
+
+	using dijkstra_result = std::pair<std::vector<T>, std::vector<int>>;
+	dijkstra_result dijkstra(int start_node) const {
+		std::vector<T> distance(n, inf);
+		std::vector<int> parent(n, no_parent);
+		std::vector<int> visited(n);
+		std::priority_queue<std::pair<T, int>, std::vector<std::pair<T, int>>,
+		                    std::greater<std::pair<T, int>>>
+		    q;
+		q.emplace(distance[start_node] = 0, start_node);
+		while (!q.empty()) {
+			int u = q.top().second;
+			q.pop();
+			if (visited[u]) {
+				continue;
+			}
+			visited[u] = true;
+			for (size_t j = 0; j < dat[u].size(); j++) {
+				int v = (*this)[u][j];
+				T edge_weight = dat[u][j];
+				if (T new_distance = distance[u] + edge_weight;
+				    new_distance < distance[v]) {
+					q.emplace(distance[v] = new_distance, v);
+					parent[v] = u;
+				}
+			}
+		}
+		return {std::move(distance), std::move(parent)};
 	}
 };
 
