@@ -35,6 +35,16 @@ template <class T> class flow_net {
 		edges.push_back({0, 0});
 	}
 
+	void set_k_flow(int k) {
+		int new_source = n++;
+		g.resize(n);
+		push_edge(new_source, source, k);
+		source = new_source;
+	}
+
+	int get_source() const { return source; }
+	int get_sink() const { return sink; }
+
 	T dinic_max_flow() {
 		T max_flow = 0;
 		std::vector<int> distance, visited(n);
@@ -113,6 +123,16 @@ template <class T> class cost_flow_net {
 		g.push_edge(v, u, edges.size());
 		edges.push_back({0, 0, -cost});
 	}
+
+	void set_k_flow(int k) {
+		int new_source = n++;
+		g.resize(n);
+		push_edge(new_source, source, k, 0);
+		source = new_source;
+	}
+
+	int get_source() const { return source; }
+	int get_sink() const { return sink; }
 
 	std::pair<T, T> dinic_mcmf() {
 		T max_flow = 0, total_cost = 0;

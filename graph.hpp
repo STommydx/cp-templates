@@ -266,6 +266,11 @@ template <class T> class graph : public graph<void> {
 		graph<void>::push_edge(u, v);
 	}
 
+	void resize(size_t count) {
+		graph<void>::resize(count);
+		dat.resize(count);
+	}
+
 	std::vector<std::vector<T>> adjacency_matrix() const {
 		std::vector<std::vector<T>> adj(n, std::vector<T>(n));
 		for (size_t u = 0; u < n; u++) {
