@@ -26,7 +26,7 @@ template <class T> class flow_net {
 
 	flow_net(int n, int source, int sink)
 	    : n(n), g(n), source(source), sink(sink) {}
-	explicit flow_net(int n) : flow_net(n, n - 1, n - 2) {}
+	explicit flow_net(int n) : flow_net(n, n - 2, n - 1) {}
 
 	void push_edge(int u, int v, T cap) {
 		g.push_edge(u, v, edges.size());
@@ -105,7 +105,7 @@ template <class T> class cost_flow_net {
 
 	cost_flow_net(int n, int source, int sink)
 	    : n(n), g(n), source(source), sink(sink) {}
-	explicit cost_flow_net(int n) : cost_flow_net(n, n - 1, n - 2) {}
+	explicit cost_flow_net(int n) : cost_flow_net(n, n - 2, n - 1) {}
 
 	void push_edge(int u, int v, T cap, T cost) {
 		g.push_edge(u, v, edges.size());
