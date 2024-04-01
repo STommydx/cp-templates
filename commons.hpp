@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "io.hpp"
+#include "limits.hpp"
 
 /**
  * Abbreviations for common types.
@@ -38,14 +39,7 @@ using min_queue = std::priority_queue<T, std::vector<T>, std::greater<T>>;
 /**
  * Abbreviation for infinity constant.
  */
-template <class T = int>
-constexpr T INFTY =
-    std::numeric_limits<T>::has_infinity ? std::numeric_limits<T>::infinity()
-                                         : std::numeric_limits<T>::max();
-template <> constexpr int INFTY<int> = 0x3f3f3f3f;
-template <> constexpr ll INFTY<ll> = 0x3f3f3f3f3f3f3f3fLL;
-template <class T, class U>
-constexpr std::pair<T, U> INFTY<std::pair<T, U>>{INFTY<T>, INFTY<U>};
+template <class T = int> constexpr T INFTY = cp_limits<T>::infinity();
 [[maybe_unused]] constexpr int INF = INFTY<>;
 [[maybe_unused]] constexpr ll BINF = INFTY<ll>;
 
