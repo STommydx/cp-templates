@@ -14,7 +14,11 @@ template <class T> struct cp_limits {
 		           ? std::numeric_limits<T>::infinity()
 		           : std::numeric_limits<T>::max() / 2;
 	}
-	static constexpr T negative_infinity() { return -infinity(); }
+	static constexpr T negative_infinity() {
+		return std::numeric_limits<T>::has_infinity
+		           ? -std::numeric_limits<T>::infinity()
+		           : std::numeric_limits<T>::min() / 2;
+	}
 };
 
 template <> struct cp_limits<int> {
@@ -25,6 +29,11 @@ template <> struct cp_limits<int> {
 template <> struct cp_limits<long long> {
 	static constexpr long long infinity() { return 0x3f3f3f3f3f3f3f3fLL; }
 	static constexpr long long negative_infinity() { return -infinity(); }
+};
+
+template <> struct cp_limits<char> {
+	static constexpr char infinity() { return 127; }
+	static constexpr char negative_infinity() { return 0; }
 };
 
 template <class T1, class T2> struct cp_limits<std::pair<T1, T2>> {
