@@ -208,6 +208,30 @@ TEST_CASE("dijkstra shortest path", "[graph]") {
 	REQUIRE(par == std::vector<int>{graph<int>::no_parent, 0, 1, 1});
 }
 
+TEST_CASE("spfa shortest path", "[graph]") {
+	SECTION("graph without negative cycle") {
+		graph<int> g(4);
+		g.push_edge(0, 1, 2);
+		g.push_edge(1, 2, 2);
+		g.push_edge(1, 3, 1);
+		g.push_edge(0, 2, 5);
+		g.push_edge(2, 3, 3);
+		g.push_edge(0, 3, 4);
+		auto [dist, par, negative_cycle] = g.spfa(0);
+		REQUIRE(dist == std::vector<int>{0, 2, 4, 3});
+		REQUIRE(par == std::vector<int>{graph<int>::no_parent, 0, 1, 1});
+		REQUIRE(negative_cycle == false);
+	}
+	SECTION("graph with negative cycle") {
+		graph<int> g(3);
+		g.push_edge(0, 1, 2);
+		g.push_edge(1, 2, 3);
+		g.push_edge(2, 0, -6);
+		auto [dist, par, negative_cycle] = g.spfa(0);
+		REQUIRE(negative_cycle == true);
+	}
+}
+
 TEST_CASE("lowest common ancestor", "[graph]") {
 	graph<> g(7);
 	g.push_edge(0, 1);

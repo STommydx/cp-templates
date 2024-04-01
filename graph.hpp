@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "io.hpp"
+#include "limits.hpp"
 
 template <class T = void> class graph;
 
@@ -23,7 +24,7 @@ template <> class graph<void> : public std::vector<std::vector<int>> {
 
   public:
 	static constexpr int no_parent = -1;
-	static constexpr int inf = 0x3f3f3f3f;
+	static constexpr int inf = cp_limits<int>::infinity();
 	static constexpr int all_nodes = -1;
 
 	using edge = std::pair<int, int>;
@@ -288,7 +289,7 @@ template <class T> class graph : public graph<void> {
 
 	using dijkstra_result = std::pair<std::vector<T>, std::vector<int>>;
 	dijkstra_result dijkstra(int start_node) const {
-		std::vector<T> distance(n, inf);
+		std::vector<T> distance(n, cp_limits<T>::infinity());
 		std::vector<int> parent(n, no_parent);
 		std::vector<int> visited(n);
 		std::priority_queue<std::pair<T, int>, std::vector<std::pair<T, int>>,
@@ -313,6 +314,44 @@ template <class T> class graph : public graph<void> {
 			}
 		}
 		return {std::move(distance), std::move(parent)};
+	}
+
+	using spfa_result = std::tuple<std::vector<T>, std::vector<int>, bool>;
+	spfa_result spfa(int start_node) const {
+		std::vector<T> distance(n, cp_limits<T>::infinity());
+		std::vector<int> edge_distance(n);
+		std::vector<int> parent(n, no_parent);
+		std::vector<int> in_queue(n);
+		std::queue<int> q;
+		q.push(start_node);
+		distance[start_node] = 0;
+		edge_distance[start_node] = 0;
+		in_queue[start_node] = true;
+		while (!q.empty()) {
+			int u = q.front();
+			q.pop();
+			in_queue[u] = false;
+			for (size_t j = 0; j < dat[u].size(); j++) {
+				int v = (*this)[u][j];
+				T edge_weight = dat[u][j];
+				if (T new_distance = distance[u] + edge_weight;
+				    new_distance < distance[v]) {
+					distance[v] = new_distance;
+					parent[v] = u;
+					// negative cycle detection
+					edge_distance[v] = edge_distance[u] + 1;
+					if (edge_distance[v] > static_cast<int>(n)) {
+						return {std::move(distance), std::move(parent), true};
+					}
+					// push only if not in queue
+					if (!in_queue[v]) {
+						q.push(v);
+						in_queue[v] = true;
+					}
+				}
+			}
+		}
+		return {std::move(distance), std::move(parent), false};
 	}
 };
 
