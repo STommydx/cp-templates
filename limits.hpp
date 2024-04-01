@@ -7,6 +7,7 @@
 #define LIMITS_HPP
 
 #include <limits>
+#include <utility>
 
 template <class T> struct cp_limits {
 	static constexpr T infinity() {
