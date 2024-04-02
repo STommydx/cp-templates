@@ -195,6 +195,17 @@ TEST_CASE("building connected components", "[graph]") {
 	REQUIRE(components[1] == std::vector<int>{3, 4});
 }
 
+TEST_CASE("0-1 BFS", "[graph]") {
+	graph<int> g(4);
+	g.push_edge(0, 1, 1);
+	g.push_edge(1, 2, 1);
+	g.push_edge(1, 3, 0);
+	g.push_edge(3, 2, 0);
+	auto [dist, par] = g.zero_one_bfs(0);
+	REQUIRE(dist == std::vector<int>{0, 1, 1, 1});
+	REQUIRE(par == std::vector<int>{graph<int>::no_parent, 0, 3, 1});
+}
+
 TEST_CASE("dijkstra shortest path", "[graph]") {
 	graph<int> g(4);
 	g.push_edge(0, 1, 2);

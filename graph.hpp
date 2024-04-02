@@ -321,6 +321,39 @@ template <class T> class graph : public graph<void> {
 		return {std::move(distance), std::move(parent)};
 	}
 
+	using zero_one_bfs_result = std::pair<std::vector<T>, std::vector<int>>;
+	zero_one_bfs_result zero_one_bfs(int start_node) const {
+		std::vector<T> distance(n, cp_limits<T>::infinity());
+		std::vector<int> parent(n, no_parent);
+		std::vector<int> visited(n);
+		std::deque<int> q;
+		distance[start_node] = 0;
+		q.push_front(start_node);
+		while (!q.empty()) {
+			int u = q.front();
+			q.pop_front();
+			if (visited[u]) {
+				continue;
+			}
+			visited[u] = true;
+			for (size_t j = 0; j < dat[u].size(); j++) {
+				int v = (*this)[u][j];
+				T edge_weight = dat[u][j];
+				if (T new_distance = distance[u] + edge_weight;
+				    new_distance < distance[v]) {
+					distance[v] = new_distance;
+					parent[v] = u;
+					if (edge_weight == 0) {
+						q.push_front(v);
+					} else {
+						q.push_back(v);
+					}
+				}
+			}
+		}
+		return {std::move(distance), std::move(parent)};
+	}
+
 	using spfa_result = std::tuple<std::vector<T>, std::vector<int>, bool>;
 	spfa_result spfa(int start_node) const {
 		std::vector<T> distance(n, cp_limits<T>::infinity());
