@@ -49,9 +49,14 @@ func Pack(settings PackSettings) error {
 		defer outputFile.Close()
 		writer := bufio.NewWriter(outputFile)
 		defer writer.Flush()
+		writeCount := make(map[string]int)
 		for _, sourceFilePath := range settings.SourceFiles {
 			var parseAndWriteSourceFile func(sourceFilePath string) error
 			parseAndWriteSourceFile = func(sourceFilePath string) error {
+				if _, ok := writeCount[sourceFilePath]; ok {
+					return nil
+				}
+				writeCount[sourceFilePath] = 1
 				sourceFile, err := os.Open(sourceFilePath)
 				if err != nil {
 					return fmt.Errorf("failed to open source file: %w", err)
