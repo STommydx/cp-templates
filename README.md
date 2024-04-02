@@ -14,6 +14,12 @@ Welcome to my Competitive Programming Templates repository. Here, you'll find a 
 - [Segment Tree (Dynamic version)](classic_segment_tree.hpp)
 - [Sparse Table](sparse_table.hpp)
 
+### Flow Networks
+
+- [Dinic's Algorithm](flow.hpp)
+- [Primal Dual Algorithm](flow.hpp)
+- [Sucessive Shortest Path](flow.hpp)
+
 ### Geometry
 
 - [Convex Hull Trick](cht.hpp)
@@ -21,7 +27,11 @@ Welcome to my Competitive Programming Templates repository. Here, you'll find a 
 
 ### Graphs
 
-- [LCA](graph.hpp)
+- [BFS Traversal](graph.hpp)
+- [DFS Traversal](graph.hpp)
+- [Dijkstra's Algorithm](graph.hpp)
+- [LCA](lca.hpp)
+- [SPFA](graph.hpp)
 
 ### String Algorithms
 
