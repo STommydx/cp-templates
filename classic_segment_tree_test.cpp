@@ -56,6 +56,20 @@ TEST_CASE("classic_segment_tree: range min query, point assignment update",
 	REQUIRE(st.query(2, 3) == 4);
 }
 
+TEST_CASE(
+    "classic_segment_tree: first i where v[i] >= k query, point assignment",
+    "[classic_segment_tree]") {
+	std::vector<int> v{3, 2, 8, 5};
+	classic_segment_tree<int, int, fn::maximum<>, fn::assign> st(v);
+	auto predicate = [&](int x) { return x >= 5; };
+	REQUIRE(st.find(0, 3, predicate) == 2);
+	st.modify(0, 6);
+	REQUIRE(st.find(0, 3, predicate) == 0);
+	REQUIRE(st.find(0, 3, 8, std::ranges::greater_equal{}) == 2);
+	REQUIRE(st.find(0, 1, 8, std::ranges::greater_equal{}) == st.npos);
+	REQUIRE(st.find(1, 3, 6, std::ranges::greater_equal{}) == 2);
+}
+
 TEST_CASE("classic_segment_tree: range min query, point assignment update, "
           "with projection",
           "[classic_segment_tree]") {
@@ -212,6 +226,21 @@ TEST_CASE(
 	REQUIRE(st.query(0, 8).ans == 7);
 	REQUIRE(st.query(0, 2).l_ans == -2);
 	REQUIRE(st.query(1, 2).r_ans == 0);
+}
+
+TEST_CASE("classic_lazy_segment_tree: first i where v[i] >= k query, range add "
+          "update",
+          "[classic_segment_tree]") {
+	std::vector<int> v{3, 2, 8, 5};
+	classic_lazy_segment_tree<int, int, fn::maximum<>, std::plus<>, std::plus<>>
+	    st(v);
+	auto predicate = [&](int x) { return x >= 5; };
+	REQUIRE(st.find(0, 3, predicate) == 2);
+	st.modify(0, 1, 3);
+	REQUIRE(st.find(0, 3, predicate) == 0);
+	REQUIRE(st.find(0, 3, 8, std::ranges::greater_equal{}) == 2);
+	REQUIRE(st.find(0, 1, 8, std::ranges::greater_equal{}) == st.npos);
+	REQUIRE(st.find(1, 3, 6, std::ranges::greater_equal{}) == 2);
 }
 
 TEST_CASE("dynamic_segment_tree: range max query, range add update",

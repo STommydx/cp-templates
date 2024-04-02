@@ -16,6 +16,10 @@ class classic_segment_tree {
 	CombineOp combinator;
 	UpdateOp updater;
 
+  public:
+	static constexpr size_t npos = -1;
+
+  private:
 	// 2n memory implementation
 	// https://cp-algorithms.com/data_structures/segment_tree.html#memory-efficient-implementation
 	constexpr size_t get_root_index() const { return 0; }
@@ -71,6 +75,24 @@ class classic_segment_tree {
 		                  query(mi + 1, r, ur, mi + 1, hi));
 	}
 
+	template <class Pred>
+	size_t find(size_t l, size_t u, size_t lo, size_t hi, Pred &pred) const {
+		if (!pred(tree[u])) {
+			return npos;
+		}
+		if (lo == hi) {
+			return lo;
+		}
+		size_t mi = lo + (hi - lo) / 2;
+		if (l <= mi) {
+			if (size_t l_res = find(l, get_left_index(u, lo, hi), lo, mi, pred);
+			    l_res != npos) {
+				return l_res;
+			}
+		}
+		return find(l, get_right_index(u, lo, hi), mi + 1, hi, pred);
+	}
+
   public:
 	explicit classic_segment_tree(const std::vector<T> &init,
 	                              CombineOp combinator = {},
@@ -93,6 +115,18 @@ class classic_segment_tree {
 	T query(size_t l, size_t r) const {
 		return query(l, r, get_root_index(), 0, n - 1);
 	}
+
+	template <std::predicate<const T &> Pred>
+	size_t find(size_t l, size_t r, Pred pred = {}) const {
+		size_t result = find(l, get_root_index(), 0, n - 1, pred);
+		return result <= r ? result : npos;
+	}
+
+	template <class R, std::predicate<const R &, const T &> BinaryPred =
+	                       std::ranges::equal_to>
+	size_t find(size_t l, size_t r, const R &val, BinaryPred pred = {}) const {
+		return find(l, r, [&val, &pred](const T &x) { return pred(x, val); });
+	}
 };
 
 template <class T, class U = T, class CombineOp = std::plus<>,
@@ -107,6 +141,10 @@ class classic_lazy_segment_tree {
 	CombineUpdateOp lazyCombinator;
 	UpdateLenOp updaterLen;
 
+  public:
+	static constexpr size_t npos = -1;
+
+  private:
 	// 2n memory implementation
 	// https://cp-algorithms.com/data_structures/segment_tree.html#memory-efficient-implementation
 	constexpr size_t get_root_index() const { return 0; }
@@ -180,6 +218,25 @@ class classic_lazy_segment_tree {
 		return combinator(query(l, r, ul, lo, mi), query(l, r, ur, mi + 1, hi));
 	}
 
+	template <class Pred>
+	size_t find(size_t l, size_t u, size_t lo, size_t hi, Pred &pred) {
+		if (!pred(tree[u])) {
+			return npos;
+		}
+		if (lo == hi) {
+			return lo;
+		}
+		push(u, lo, hi);
+		size_t mi = lo + (hi - lo) / 2;
+		if (l <= mi) {
+			if (size_t l_res = find(l, get_left_index(u, lo, hi), lo, mi, pred);
+			    l_res != npos) {
+				return l_res;
+			}
+		}
+		return find(l, get_right_index(u, lo, hi), mi + 1, hi, pred);
+	}
+
   public:
 	explicit classic_lazy_segment_tree(const std::vector<T> &init,
 	                                   CombineOp combinator = {},
@@ -204,6 +261,18 @@ class classic_lazy_segment_tree {
 	}
 
 	T query(int l, int r) { return query(l, r, get_root_index(), 0, n - 1); }
+
+	template <std::predicate<const T &> Pred>
+	size_t find(size_t l, size_t r, Pred pred = {}) {
+		size_t result = find(l, get_root_index(), 0, n - 1, pred);
+		return result <= r ? result : npos;
+	}
+
+	template <class R, std::predicate<const R &, const T &> BinaryPred =
+	                       std::ranges::equal_to>
+	size_t find(size_t l, size_t r, const R &val, BinaryPred pred = {}) {
+		return find(l, r, [&val, &pred](const T &x) { return pred(x, val); });
+	}
 };
 
 template <class T, class U = T, class CombineOp = std::plus<>,
