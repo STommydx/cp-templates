@@ -201,6 +201,110 @@ template <class T> class cost_flow_net {
 		}
 		return {total_cost, max_flow};
 	}
+
+	std::pair<T, T> primal_dual_mcmf() {
+		auto spfa = [&]() {
+			std::vector<T> distance(n, cp_limits<T>::infinity());
+			std::vector<int> in_queue(n);
+			std::queue<int> q;
+			q.push(source);
+			distance[source] = 0;
+			in_queue[source] = 1;
+			while (!q.empty()) {
+				int u = q.front();
+				q.pop();
+				in_queue[u] = 0;
+				for (int i = 0; i < std::ssize(g[u]); i++) {
+					int ei = g.dat[u][i];
+					edge &e = edges[ei];
+					int v = g[u][i];
+					if (e.flow >= e.cap)
+						continue;
+					if (T new_dist = distance[u] + e.cost;
+					    new_dist < distance[v]) {
+						distance[v] = new_dist;
+						if (!in_queue[v])
+							q.push(v), in_queue[v] = 1;
+					}
+				}
+			}
+			return distance;
+		};
+		std::vector<T> potential = spfa();
+		std::vector<T> distance;
+		std::vector<int> visited(n), current_index(n);
+		auto dijkstra = [&]() {
+			distance.assign(n, cp_limits<T>::infinity());
+			visited.assign(n, false);
+			std::priority_queue<std::pair<T, int>,
+			                    std::vector<std::pair<T, int>>,
+			                    std::greater<std::pair<T, int>>>
+			    q;
+			q.emplace(distance[source] = 0, source);
+			while (!q.empty()) {
+				int u = q.top().second;
+				q.pop();
+				if (visited[u])
+					continue;
+				visited[u] = true;
+				for (int i = 0; i < std::ssize(g[u]); i++) {
+					int ei = g.dat[u][i];
+					edge &e = edges[ei];
+					int v = g[u][i];
+					if (e.flow >= e.cap)
+						continue;
+					if (T new_dist =
+					        distance[u] + e.cost + potential[u] - potential[v];
+					    new_dist < distance[v]) {
+						q.emplace(distance[v] = new_dist, v);
+					}
+				}
+			}
+			return distance[sink] != cp_limits<T>::infinity();
+		};
+		auto dfs = [&](auto &self, int u, T flow) -> T {
+			if (u == sink || flow == 0)
+				return flow;
+			T current_flow = 0;
+			visited[u] = true;
+			for (int &i = current_index[u]; i < std::ssize(g[u]); i++) {
+				int ei = g.dat[u][i];
+				edge &e = edges[ei];
+				int v = g[u][i];
+				if (distance[v] !=
+				    distance[u] + e.cost + potential[u] - potential[v])
+					continue;
+				if (visited[v])
+					continue;
+				T can_push = self(
+				    self, v, std::min(flow - current_flow, e.cap - e.flow));
+				if (can_push > 0) {
+					e.flow += can_push;
+					edges[ei ^ 1].flow -= can_push;
+					current_flow += can_push;
+					if (current_flow == flow)
+						break;
+				}
+			}
+			visited[u] = false;
+			return current_flow;
+		};
+		T total_cost = 0, max_flow = 0;
+		while (dijkstra()) {
+			visited.assign(n, false);
+			current_index.assign(n, 0);
+			T current_flow;
+			while ((current_flow = dfs(dfs, source, cp_limits<T>::infinity())) >
+			       0) {
+				max_flow += current_flow;
+				total_cost += current_flow * (distance[sink] + potential[sink]);
+			}
+			for (int i = 0; i < n; i++)
+				potential[i] = std::min(distance[i] + potential[i],
+				                        cp_limits<T>::infinity());
+		}
+		return {total_cost, max_flow};
+	}
 };
 
 #endif
