@@ -49,3 +49,26 @@ TEST_CASE("dsu with data", "[dsu]") {
 	REQUIRE(d.size_of_set(4) == 2);
 	REQUIRE(d[4] == 20);
 }
+
+TEST_CASE("dsu_rollback behaves as expected", "[dsu]") {
+	dsu_rollback d(5);
+	d.union_sets(0, 1);
+	REQUIRE(d.find_set(0) == d.find_set(1));
+	REQUIRE(d.find_set(1) != d.find_set(2));
+	d.union_sets(1, 2);
+	REQUIRE(d.find_set(0) == d.find_set(2));
+	REQUIRE(d.find_set(1) == d.find_set(2));
+	REQUIRE(d.size_of_set(0) == 3);
+	d.rollback();
+	REQUIRE(d.find_set(0) != d.find_set(2));
+	REQUIRE(d.find_set(1) != d.find_set(2));
+	REQUIRE(d.size_of_set(0) == 2);
+	REQUIRE(d.size_of_set(2) == 1);
+	d.union_sets(1, 3);
+	d.union_sets(4, 3);
+	d.union_sets(2, 1);
+	d.rollback(2);
+	REQUIRE(d.find_set(0) == d.find_set(3));
+	REQUIRE(d.size_of_set(0) == 3);
+	REQUIRE(d.size_of_set(2) == 1);
+}
