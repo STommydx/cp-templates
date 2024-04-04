@@ -96,6 +96,7 @@ class mo {
 				// set boundary at first element of next block
 				l = (block(ql) + 1) << magic;
 				r = l - 1;
+				last_block = block(ql);
 			}
 			if (block(ql) == block(qr)) {
 				// brute force calculation
@@ -111,10 +112,12 @@ class mo {
 			while (r < qr)
 				push_right(++r);
 			save();
+			int save_l = l;
 			while (l > ql)
 				push_left(--l);
 			result[qi] = answer(l, r, qi);
 			restore();
+			l = save_l;
 		}
 		return result;
 	}
