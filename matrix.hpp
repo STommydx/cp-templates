@@ -6,6 +6,9 @@
 #ifndef MATRIX_HPP
 #define MATRIX_HPP
 
+#include <algorithm>
+#include <concepts>
+#include <functional>
 #include <utility>
 #include <valarray>
 #include <vector>
@@ -219,11 +222,6 @@ template <class T> class matrix {
 	T &operator()(size_t i, size_t j) { return at(i, j); }
 	operator std::vector<std::vector<T>>() const { return to_vector(); }
 
-	matrix operator+() const { return matrix(n, m, +dat); }
-	matrix operator-() const { return matrix(n, m, -dat); }
-	matrix operator~() const { return matrix(n, m, ~dat); }
-	matrix<bool> operator!() const { return matrix<bool>(n, m, !dat); }
-
 #define MEMBER_BINARY_OP(OP)                                                   \
 	matrix &operator OP(const matrix & m) {                                    \
 		dat OP m.dat;                                                          \
@@ -250,9 +248,9 @@ template <class T> class matrix {
  * Non-member functions
  */
 #define NON_MEMBER_BINARY_OP(OP)                                               \
-	friend matrix<T> operator OP<>(const matrix<T> &a, const matrix<T> &b);    \
-	friend matrix<T> operator OP<>(const matrix<T> &a, const T & b);           \
-	friend matrix<T> operator OP<>(const T & a, const matrix<T> &b);
+	friend matrix<T> operator OP<T>(const matrix<T> &a, const matrix<T> &b);   \
+	friend matrix<T> operator OP<T>(const matrix<T> &a, const T & b);          \
+	friend matrix<T> operator OP<T>(const T & a, const matrix<T> &b);
 
 	NON_MEMBER_BINARY_OP(+)
 	NON_MEMBER_BINARY_OP(-)
@@ -267,9 +265,10 @@ template <class T> class matrix {
 #undef NON_MEMBER_BINARY_OP
 
 #define NON_MEMBER_BINARY_PREDICATE(OP)                                        \
-	friend matrix<bool> operator OP<>(const matrix<T> &a, const matrix<T> &b); \
-	friend matrix<bool> operator OP<>(const matrix<T> &a, const T & b);        \
-	friend matrix<bool> operator OP<>(const T & a, const matrix<T> &b);
+	friend matrix<bool> operator OP<T>(const matrix<T> &a,                     \
+	                                   const matrix<T> &b);                    \
+	friend matrix<bool> operator OP<T>(const matrix<T> &a, const T & b);       \
+	friend matrix<bool> operator OP<T>(const T & a, const matrix<T> &b);
 
 	NON_MEMBER_BINARY_PREDICATE(&&)
 	NON_MEMBER_BINARY_PREDICATE(||)
@@ -281,6 +280,14 @@ template <class T> class matrix {
 	NON_MEMBER_BINARY_PREDICATE(>=)
 #undef NON_MEMBER_BINARY_PREDICATE
 
+	matrix operator+() const { return matrix(n, m, +dat); }
+	matrix operator-() const { return matrix(n, m, -dat); }
+	matrix operator~() const { return matrix(n, m, ~dat); }
+	matrix<bool> operator!() const { return matrix<bool>(n, m, !dat); }
+
+	/*
+	 * Other non-member friend functions
+	 */
 	friend matrix matmul<>(const matrix &a, const matrix &b);
 };
 

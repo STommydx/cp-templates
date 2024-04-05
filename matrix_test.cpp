@@ -58,7 +58,7 @@ TEST_CASE("matrix construction and member functions", "[matrix]") {
 		REQUIRE(std::ranges::equal(a.sum<0>(), std::vector<int>{3, 1}));
 		REQUIRE(std::ranges::equal(a.sum<1>(), std::vector<int>{2, 2}));
 		auto aggregated = a.sum<0, true>();
-		REQUIRE(aggregated.shape() == std::make_pair(1, 2));
+		REQUIRE(aggregated.shape() == std::pair<size_t, size_t>(1, 2));
 		REQUIRE(std::ranges::equal(std::valarray<int>(aggregated.row(0)),
 		                           std::vector<int>{3, 1}));
 		REQUIRE(a.max() == 2);
