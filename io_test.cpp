@@ -31,6 +31,35 @@ TEST_CASE("IO operator overload works for common cp types", "[io]") {
 		REQUIRE(v == std::vector<std::vector<std::string>>(
 		                 {{"1", "22", "333"}, {"4444", "55555", "666666"}}));
 	}
+	SECTION("valarray outputs elements separated by space") {
+		std::stringstream ss;
+		std::valarray<std::string> v{"1", "22", "333"};
+		ss << v;
+		REQUIRE(ss.str() == "1 22 333");
+	}
+	SECTION("valarray inputs elements separated by space") {
+		std::stringstream ss{"1 22 333"};
+		std::valarray<std::string> v(3);
+		ss >> v;
+		std::valarray<std::string> expected{"1", "22", "333"};
+		REQUIRE((v == expected).min());
+	}
+	SECTION("2d valarray outputs elements separated by space and newline") {
+		std::stringstream ss;
+		std::valarray<std::valarray<std::string>> v{
+		    {"1", "22", "333"}, {"4444", "55555", "666666"}};
+		ss << v;
+		REQUIRE(ss.str() == "1 22 333\n4444 55555 666666");
+	}
+	SECTION("2d valarray inputs elements separated by space and newline") {
+		std::stringstream ss{"1 22 333\n4444 55555 666666"};
+		std::valarray<std::valarray<std::string>> v(
+		    std::valarray<std::string>(3), 2);
+		ss >> v;
+		REQUIRE(v[0][0] == "1");
+		REQUIRE(v[1][1] == "55555");
+		REQUIRE(v[1][2] == "666666");
+	}
 	SECTION("pair outputs elements separated by space") {
 		std::stringstream ss;
 		std::pair<std::string, int> p{"1", 22};
@@ -114,5 +143,14 @@ TEST_CASE("I/O for 1-based indices", "[io]") {
 		    2, std::vector<std::tuple<int, int, int>>(3));
 		ss >> get_indices(v2);
 		REQUIRE(v == v2);
+	}
+	SECTION("valarray of 1-based indices") {
+		std::stringstream ss;
+		std::valarray<int> p{3, 0, 2, 1};
+		ss << put_indices(p);
+		REQUIRE(ss.str() == "4 1 3 2");
+		std::valarray<int> p2(4);
+		ss >> get_indices(p2);
+		REQUIRE((p == p2).min());
 	}
 }

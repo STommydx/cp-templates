@@ -10,6 +10,7 @@
 #include <iostream>
 #include <queue>
 #include <ranges>
+#include <valarray>
 #include <vector>
 
 /**
@@ -20,8 +21,13 @@ std::ostream &operator<<(std::ostream &os, const std::vector<T> &r);
 template <class T>
 std::ostream &operator<<(std::ostream &os, const std::deque<T> &r);
 template <class T>
+std::ostream &operator<<(std::ostream &os, const std::valarray<T> &r);
+template <class T>
 std::ostream &operator<<(std::ostream &os,
                          const std::vector<std::vector<T>> &r);
+template <class T>
+std::ostream &operator<<(std::ostream &os,
+                         const std::valarray<std::valarray<T>> &r);
 template <class T1, class T2>
 std::ostream &operator<<(std::ostream &os,
                          const std::vector<std::pair<T1, T2>> &r);
@@ -47,8 +53,17 @@ std::ostream &operator<<(std::ostream &os, const std::deque<T> &r) {
 	return print_range(os, r);
 }
 template <class T>
+std::ostream &operator<<(std::ostream &os, const std::valarray<T> &r) {
+	return print_range(os, r);
+}
+template <class T>
 std::ostream &operator<<(std::ostream &os,
                          const std::vector<std::vector<T>> &r) {
+	return print_range(os, r, '\n');
+}
+template <class T>
+std::ostream &operator<<(std::ostream &os,
+                         const std::valarray<std::valarray<T>> &r) {
 	return print_range(os, r, '\n');
 }
 template <class T1, class T2>
@@ -104,7 +119,14 @@ std::ostream &operator<<(std::ostream &os,
                          _put_indices<std::deque<T>, base> pi);
 template <class T, int base>
 std::ostream &operator<<(std::ostream &os,
+                         _put_indices<std::valarray<T>, base> pi);
+template <class T, int base>
+std::ostream &operator<<(std::ostream &os,
                          _put_indices<std::vector<std::vector<T>>, base> pi);
+template <class T, int base>
+std::ostream &
+operator<<(std::ostream &os,
+           _put_indices<std::valarray<std::valarray<T>>, base> pi);
 template <class T, int base>
 std::ostream &operator<<(std::ostream &os,
                          _put_indices<std::vector<std::pair<T, T>>, base> pi);
@@ -134,6 +156,13 @@ std::ostream &operator<<(std::ostream &os,
 }
 template <class T, int base>
 std::ostream &operator<<(std::ostream &os,
+                         _put_indices<std::valarray<T>, base> pi) {
+	return print_range(os, pi.v | std::views::transform([](const auto &x) {
+		                       return put_indices<T, base>(x);
+	                       }));
+}
+template <class T, int base>
+std::ostream &operator<<(std::ostream &os,
                          _put_indices<std::deque<T>, base> pi) {
 	return print_range(os, pi.v | std::views::transform([](const auto &x) {
 		                       return put_indices<T, base>(x);
@@ -144,6 +173,15 @@ std::ostream &operator<<(std::ostream &os,
                          _put_indices<std::vector<std::vector<T>>, base> pi) {
 	return print_range(os, pi.v | std::views::transform([](const auto &x) {
 		                       return put_indices<std::vector<T>, base>(x);
+	                       }),
+	                   '\n');
+}
+template <class T, int base>
+std::ostream &
+operator<<(std::ostream &os,
+           _put_indices<std::valarray<std::valarray<T>>, base> pi) {
+	return print_range(os, pi.v | std::views::transform([](const auto &x) {
+		                       return put_indices<std::valarray<T>, base>(x);
 	                       }),
 	                   '\n');
 }
@@ -184,6 +222,11 @@ std::ostream &operator<<(std::ostream &os,
 	return os;
 }
 
+template <class T>
+std::istream &operator>>(std::istream &is, std::vector<T> &r);
+template <class T> std::istream &operator>>(std::istream &is, std::deque<T> &r);
+template <class T>
+std::istream &operator>>(std::istream &is, std::valarray<T> &r);
 template <class T1, class T2>
 std::istream &operator>>(std::istream &is, std::pair<T1, T2> &x);
 template <class... Ts>
@@ -199,6 +242,12 @@ std::istream &operator>>(std::istream &is, std::vector<T> &r) {
 }
 template <class T>
 std::istream &operator>>(std::istream &is, std::deque<T> &r) {
+	for (auto &x : r)
+		is >> x;
+	return is;
+}
+template <class T>
+std::istream &operator>>(std::istream &is, std::valarray<T> &r) {
 	for (auto &x : r)
 		is >> x;
 	return is;
@@ -233,6 +282,9 @@ std::istream &operator>>(std::istream &is,
 template <class T, int base>
 std::istream &operator>>(std::istream &is,
                          _get_indices<std::deque<T>, base> gi);
+template <class T, int base>
+std::istream &operator>>(std::istream &is,
+                         _get_indices<std::valarray<T>, base> gi);
 template <class T1, class T2, int base>
 std::istream &operator>>(std::istream &is,
                          _get_indices<std::pair<T1, T2>, base> gi);
@@ -256,6 +308,13 @@ std::istream &operator>>(std::istream &is,
 template <class T, int base>
 std::istream &operator>>(std::istream &is,
                          _get_indices<std::deque<T>, base> gi) {
+	for (auto &x : gi.v)
+		is >> get_indices<T, base>(x);
+	return is;
+}
+template <class T, int base>
+std::istream &operator>>(std::istream &is,
+                         _get_indices<std::valarray<T>, base> gi) {
 	for (auto &x : gi.v)
 		is >> get_indices<T, base>(x);
 	return is;
