@@ -191,4 +191,38 @@ template <class T> struct magic_vector {
 	}
 };
 
+template <class T> class vector_rollback {
+	std::vector<T> data;
+	std::vector<std::pair<size_t, T>> history;
+
+  public:
+	static constexpr size_t last_version = -1;
+
+	template <class... Args>
+	vector_rollback(Args... args) : data(args...), history() {}
+	size_t size() const { return data.size(); }
+	size_t version() const { return history.size(); }
+	T modify(size_t i, T x) {
+		history.emplace_back(i, data[i]);
+		data[i] = x;
+		return x;
+	}
+	const T &front() const { return data.front(); }
+	const T &back() const { return data.back(); }
+	const T &operator[](size_t i) const { return data[i]; }
+	const T &at(size_t i) const { return data.at(i); }
+	void rollback(size_t version = last_version) {
+		if (version == last_version) {
+			if (history.empty())
+				return;
+			version = history.size() - 1;
+		}
+		while (history.size() > version) {
+			auto [i, x] = history.back();
+			history.pop_back();
+			data[i] = x;
+		}
+	}
+};
+
 #endif

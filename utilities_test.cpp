@@ -76,3 +76,18 @@ TEST_CASE("compression_vector constructors", "[utilities]") {
 	v3.compress();
 	REQUIRE(v3[0] == "");
 }
+
+TEST_CASE("vector with rollback", "[utilities]") {
+	std::vector<int> v{2, 4, 3, 5, 8, 3, 5, 5};
+	vector_rollback<int> v2(v);
+	v2.modify(3, 10);
+	REQUIRE(v2[3] == 10);
+	v2.rollback();
+	REQUIRE(v2[3] == 5);
+	v2.modify(3, 10);
+	v2.modify(4, 10);
+	v2.modify(3, 5);
+	v2.rollback(1);
+	REQUIRE(v2[3] == 10);
+	REQUIRE(v2[4] == 8);
+}
