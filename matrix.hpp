@@ -7,6 +7,7 @@
 #define MATRIX_HPP
 
 #include <valarray>
+#include <vector>
 
 template <class T> class matrix;
 
@@ -68,7 +69,7 @@ template <class T> class matrix {
 	matrix(const std::vector<std::vector<T>> &v)
 	    : n(v.size()), m(v.empty() ? 0 : v[0].size()), dat(n * m) {
 		for (size_t i = 0; i < n; ++i) {
-			std::ranges::copy(v[i], dat.begin() + i * m);
+			std::ranges::copy(v[i], begin(dat) + i * m);
 		}
 	}
 

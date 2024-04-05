@@ -113,6 +113,23 @@ TEST_CASE("matrix construction and member functions", "[matrix]") {
 		a >>= 3;
 		REQUIRE(a(0, 0) == 3);
 	}
+	SECTION("std::vector conversion") {
+		std::vector<std::vector<int>> v = a;
+		REQUIRE(v[0][0] == 1);
+		REQUIRE(v[1][0] == 1);
+		REQUIRE(v[1][1] == 1);
+		REQUIRE(v[0][1] == 1);
+		matrix<int> m = v;
+		REQUIRE(m(0, 0) == 1);
+		REQUIRE(m(1, 0) == 1);
+		REQUIRE(m(1, 1) == 1);
+		REQUIRE(m(0, 1) == 1);
+		std::vector<std::vector<int>> result = matrix<int>(v) + m;
+		REQUIRE(result[0][0] == 2);
+		REQUIRE(result[1][0] == 2);
+		REQUIRE(result[1][1] == 2);
+		REQUIRE(result[0][1] == 2);
+	}
 }
 
 TEST_CASE("matrix arithmetic operator overload", "[matrix]") {
