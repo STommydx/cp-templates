@@ -13,6 +13,8 @@
 #include <valarray>
 #include <vector>
 
+#include "io.hpp"
+
 template <class T> class matrix;
 
 #define NON_MEMBER_BINARY_OP(OP)                                               \
@@ -50,6 +52,10 @@ NON_MEMBER_BINARY_PREDICATE(>)
 NON_MEMBER_BINARY_PREDICATE(<=)
 NON_MEMBER_BINARY_PREDICATE(>=)
 #undef NON_MEMBER_BINARY_PREDICATE
+
+template <class T>
+std::ostream &operator<<(std::ostream &os, const matrix<T> &a);
+template <class T> std::istream &operator>>(std::istream &is, matrix<T> &a);
 
 template <class T> matrix<T> matmul(const matrix<T> &a, const matrix<T> &b);
 
@@ -285,6 +291,9 @@ template <class T> class matrix {
 	matrix operator~() const { return matrix(n, m, ~dat); }
 	matrix<bool> operator!() const { return matrix<bool>(n, m, !dat); }
 
+	friend std::ostream &operator<< <>(std::ostream &os, const matrix &m);
+	friend std::istream &operator>> <>(std::istream &is, matrix &m);
+
 	/*
 	 * Other non-member friend functions
 	 */
@@ -340,6 +349,20 @@ NON_MEMBER_BINARY_PREDICATE(<=)
 NON_MEMBER_BINARY_PREDICATE(>)
 NON_MEMBER_BINARY_PREDICATE(>=)
 #undef NON_MEMBER_BINARY_PREDICATE
+
+template <class T>
+std::ostream &operator<<(std::ostream &os, const matrix<T> &m) {
+	for (size_t i = 0; i < m.n; ++i) {
+		if (i > 0)
+			os << '\n';
+		os << m.row(i);
+	}
+	return os;
+}
+
+template <class T> std::istream &operator>>(std::istream &is, matrix<T> &m) {
+	return is >> m.dat;
+}
 
 template <class T> matrix<T> matmul(const matrix<T> &a, const matrix<T> &b) {
 	matrix<T> result(a.n, b.m);
