@@ -426,7 +426,7 @@ std::pair<matrix<T>, T> gaussian_elimination(const matrix<T> &a) {
 					k = j;
 				}
 			} else {
-				if (a(j, i)) {
+				if (b(j, i)) {
 					k = j;
 				}
 			}
@@ -462,7 +462,8 @@ std::pair<matrix<T>, T> gaussian_elimination(const matrix<T> &a) {
 
 template <class T> std::optional<matrix<T>> matrix_inverse(const matrix<T> &a) {
 	size_t n = a.shape().first;
-	auto [res, det] = gaussian_elimination<T>(a.template concatenate<1>(matrix<T>::identity(n)));
+	auto [res, det] = gaussian_elimination<T>(
+	    a.template concatenate<1>(matrix<T>::identity(n)));
 	if (det == 0)
 		return std::nullopt;
 	return res.submatrix(0, n, n, n);
