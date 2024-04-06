@@ -176,3 +176,10 @@ TEST_CASE("matrix multiplication", "[matrix]") {
 	REQUIRE(res[1][0] == 1);
 	REQUIRE(res[1][1] == 1);
 }
+
+TEST_CASE("matrix power", "[matrix]") {
+	matrix<int> mat(2, 2);
+	mat.at(0, 0) = mat.at(0, 1) = mat.at(1, 0) = 1;
+	const auto res = matrix_power(mat, 4);
+	REQUIRE(res[0][0] == 5);
+}

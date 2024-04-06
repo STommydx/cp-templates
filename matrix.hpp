@@ -58,6 +58,8 @@ std::ostream &operator<<(std::ostream &os, const matrix<T> &a);
 template <class T> std::istream &operator>>(std::istream &is, matrix<T> &a);
 
 template <class T> matrix<T> matmul(const matrix<T> &a, const matrix<T> &b);
+template <class T, std::integral I>
+matrix<T> matrix_power(const matrix<T> &a, I p);
 
 template <class T> class matrix {
 	size_t n, m;
@@ -370,6 +372,20 @@ template <class T> matrix<T> matmul(const matrix<T> &a, const matrix<T> &b) {
 		for (size_t j = 0; j < b.m; ++j) {
 			result.at(i, j) = (a.row(i) * b.col(j)).sum();
 		}
+	}
+	return result;
+}
+
+template <class T, std::integral I>
+matrix<T> matrix_power(const matrix<T> &a, I p) {
+	auto [n, m] = a.shape();
+	matrix<T> result = matrix<T>::identity(n);
+	matrix<T> b(a);
+	while (p > 0) {
+		if (p & 1)
+			result = matmul(result, b);
+		b = matmul(b, b);
+		p >>= 1;
 	}
 	return result;
 }
