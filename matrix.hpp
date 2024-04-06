@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <concepts>
 #include <functional>
+#include <optional>
 #include <utility>
 #include <valarray>
 #include <vector>
@@ -140,6 +141,28 @@ template <class T> class matrix {
 		for (size_t i = 0; i < n; ++i)
 			res.col(i) = row(i);
 		return res;
+	}
+	matrix submatrix(size_t i, size_t j, size_t size_i, size_t size_j) const {
+		matrix res(size_i, size_j);
+		for (size_t u = 0; u < size_i; ++u)
+			res.row(u) = dat[std::slice((u + i) * m + j, size_j, 1)];
+		return res;
+	}
+	template <size_t Axis> matrix concatenate(const matrix &other) const {
+		if constexpr (Axis == 0) {
+			matrix res(n + other.n, m);
+			res.dat[std::slice(0, n * m, 1)] = dat;
+			res.dat[std::slice(n * m, other.n * m, 1)] = other.dat;
+			return res;
+		} else if constexpr (Axis == 1) {
+			matrix res(n, m + other.m);
+			for (size_t i = 0; i < n; ++i) {
+				res.dat[std::slice(i * (m + other.m), m, 1)] = row(i);
+				res.dat[std::slice(i * (m + other.m) + m, other.m, 1)] =
+				    other.row(i);
+			}
+			return res;
+		}
 	}
 	const std::valarray<T> &data() const { return dat; }
 	std::valarray<T> &data() { return dat; }
@@ -388,6 +411,63 @@ matrix<T> matrix_power(const matrix<T> &a, I p) {
 		p >>= 1;
 	}
 	return result;
+}
+
+template <class T>
+std::pair<matrix<T>, T> gaussian_elimination(const matrix<T> &a) {
+	auto [n, m] = a.shape();
+	matrix<T> b(a);
+	T det = 1;
+	for (size_t i = 0; i < n; ++i) {
+		size_t k = i;
+		for (size_t j = i + 1; j < n; ++j) {
+			if constexpr (std::is_floating_point_v<T>) {
+				if (std::abs(b(j, i)) > std::abs(b(k, i))) {
+					k = j;
+				}
+			} else {
+				if (a(j, i)) {
+					k = j;
+				}
+			}
+		}
+		if constexpr (std::is_floating_point_v<T>) {
+			const T eps = std::numeric_limits<T>::epsilon() * 10;
+			if (std::abs(b(k, i)) < eps) {
+				return {b, 0};
+			}
+		} else {
+			if (!b(k, i)) {
+				return {b, 0};
+			}
+		}
+		if (k != i) {
+			det *= -1;
+			std::valarray<T> tmp = b.row(i);
+			b.row(i) = b.row(k);
+			b.row(k) = tmp;
+		}
+		T r = b(i, i);
+		det *= r;
+		b.row(i) = std::valarray<T>(b.row(i)) / r;
+		for (size_t j = 0; j < n; ++j) {
+			if (i == j)
+				continue;
+			T r = b(j, i);
+			b.row(j) -= std::valarray<T>(b.row(i)) * r;
+		}
+	}
+	return {b, det};
+}
+
+template <class T> std::optional<matrix<T>> matrix_inverse(const matrix<T> &a) {
+	size_t n = a.shape().first;
+	matrix<T> i = matrix<T>::identity(n);
+	matrix<T> guss = a.matrix<T>::concatenate<1>(a);
+	auto [res, det] = gaussian_elimination<T>(i);
+	if (det == 0)
+		return std::nullopt;
+	return res.submatrix(0, n, n, n);
 }
 
 #endif

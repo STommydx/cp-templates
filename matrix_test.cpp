@@ -35,6 +35,26 @@ TEST_CASE("matrix construction and member functions", "[matrix]") {
 		REQUIRE(c(1, 0) == 2);
 		REQUIRE(c(1, 1) == 4);
 	}
+	SECTION("submatrix and concatenation") {
+		matrix<int> c = a.concatenate<0>(b);
+		REQUIRE(c.shape() == std::pair<size_t, size_t>(4, 2));
+		REQUIRE(c(1, 1) == 1);
+		REQUIRE(c(2, 1) == 3);
+		matrix<int> d = a.concatenate<1>(b);
+		REQUIRE(d.shape() == std::pair<size_t, size_t>(2, 4));
+		REQUIRE(d(1, 1) == 1);
+		REQUIRE(d(1, 3) == 3);
+		matrix<int> e = c.concatenate<1>(d.transpose());
+		REQUIRE(e.shape() == std::pair<size_t, size_t>(4, 4));
+		matrix<int> f = e.submatrix(1, 1, 3, 2);
+		REQUIRE(f.shape() == std::pair<size_t, size_t>(3, 2));
+		REQUIRE(f(0, 0) == 1);
+		REQUIRE(f(0, 1) == 1);
+		REQUIRE(f(1, 0) == 3);
+		REQUIRE(f(1, 1) == 3);
+		REQUIRE(f(2, 0) == 3);
+		REQUIRE(f(2, 1) == 3);
+	}
 	SECTION("matrix construction functions") {
 		matrix<int> c = matrix<int>::eye(2, 3);
 		REQUIRE(c(0, 0) == 1);
@@ -182,4 +202,76 @@ TEST_CASE("matrix power", "[matrix]") {
 	mat.at(0, 0) = mat.at(0, 1) = mat.at(1, 0) = 1;
 	const auto res = matrix_power(mat, 4);
 	REQUIRE(res[0][0] == 5);
+}
+
+TEST_CASE("gaussian elimination", "[matrix]") {
+	SECTION("integers") {
+		std::vector<std::vector<int>> mat{
+		    {1, 1, 5},
+		    {1, 0, 1},
+		};
+		auto [res, det] = gaussian_elimination<int>(mat);
+		REQUIRE(res.shape() == std::pair<size_t, size_t>(2, 3));
+		REQUIRE(det == -1);
+		REQUIRE(res(0, 0) == 1);
+		REQUIRE(res(0, 1) == 0);
+		REQUIRE(res(0, 2) == 1);
+		REQUIRE(res(1, 0) == 0);
+		REQUIRE(res(1, 1) == 1);
+		REQUIRE(res(1, 2) == 4);
+	}
+	SECTION("floating point") {
+		std::vector<std::vector<double>> mat{
+		    {1, 1.5, 5},
+		    {2, 0, 1},
+		};
+		auto [res, det] = gaussian_elimination<double>(mat);
+		REQUIRE(res.shape() == std::pair<size_t, size_t>(2, 3));
+		REQUIRE(det == -3);
+		REQUIRE(res(0, 0) == 1);
+		REQUIRE(res(0, 1) == 0);
+		REQUIRE(res(0, 2) == 0.5);
+		REQUIRE(res(1, 0) == 0);
+		REQUIRE(res(1, 1) == 1);
+		REQUIRE(res(1, 2) == 3);
+	}
+}
+
+TEST_CASE("matrix inverse", "[matrix]") {
+	SECTION("integers") {
+		std::vector<std::vector<int>> mat{
+		    {1, 1},
+		    {1, 0},
+		};
+		auto result = matrix_inverse<int>(mat);
+		REQUIRE(result.has_value());
+		auto mat_inverse = result.value();
+		REQUIRE(mat_inverse.shape() == std::pair<size_t, size_t>(2, 2));
+		REQUIRE(mat_inverse(0, 0) == 0);
+		REQUIRE(mat_inverse(0, 1) == 1);
+		REQUIRE(mat_inverse(1, 0) == 1);
+		REQUIRE(mat_inverse(1, 1) == -1);
+	}
+	SECTION("floating point") {
+		std::vector<std::vector<double>> mat{
+		    {1, 1},
+		    {1, 5},
+		};
+		auto result = matrix_inverse<double>(mat);
+		REQUIRE(result.has_value());
+		auto mat_inverse = result.value();
+		REQUIRE(mat_inverse.shape() == std::pair<size_t, size_t>(2, 2));
+		REQUIRE(mat_inverse(0, 0) == 1.25);
+		REQUIRE(mat_inverse(0, 1) == -0.25);
+		REQUIRE(mat_inverse(1, 0) == -0.25);
+		REQUIRE(mat_inverse(1, 1) == 0.25);
+	}
+	SECTION("no inverse") {
+		std::vector<std::vector<double>> mat{
+		    {2, 1},
+		    {5, 2.5},
+		};
+		auto result = matrix_inverse<double>(mat);
+		REQUIRE(!result.has_value());
+	}
 }
