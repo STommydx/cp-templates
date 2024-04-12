@@ -10,7 +10,7 @@
 #include <cctype>
 #include <queue>
 #include <ranges>
-#include <string_view>
+#include <span>
 #include <vector>
 
 #include "functional.hpp"
