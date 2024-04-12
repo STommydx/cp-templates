@@ -47,7 +47,8 @@ template <class T, class Op> class dsu : public dsu<void, Op> {
 	    : dsu(std::vector<T>(n, init), op) {}
 
 	using dsu<void, Op>::find_set;
-	T operator[](int x) { return dat[find_set(x)]; }
+	const T &operator[](int x) const { return dat[find_set(x)]; }
+	T &operator[](int x) { return dat[find_set(x)]; }
 	int union_sets(int u, int v) {
 		int gu = find_set(u), gv = find_set(v);
 		int result = dsu<void, Op>::union_sets(gu, gv);

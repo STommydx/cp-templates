@@ -227,6 +227,52 @@ template <> class graph<void> : public std::vector<std::vector<int>> {
 		}
 		return result;
 	}
+
+	using subtree_size_result = std::pair<std::vector<int>, std::vector<int>>;
+	subtree_size_result subtree_size(int root) const {
+		std::vector<int> sz(n), heavy(n, no_parent);
+		auto dfs = [&](auto &self, int u, int p) -> void {
+			sz[u] = 1;
+			for (int v : (*this)[u]) {
+				if (v - p) {
+					self(self, v, u);
+					sz[u] += sz[v];
+					if (heavy[u] == no_parent || sz[v] > sz[heavy[u]]) {
+						heavy[u] = v;
+					}
+				}
+			}
+		};
+		dfs(dfs, root, -1);
+		return {std::move(sz), std::move(heavy)};
+	}
+
+	using flatten_result =
+	    std::tuple<std::vector<int>, std::vector<int>, std::vector<int>>;
+	flatten_result flatten(int start_node = all_nodes) const {
+		std::vector<int> order, in_time(n, no_parent), out_time(n, no_parent);
+		int timer = 0;
+		auto dfs = [&](auto &self, int u) -> void {
+			in_time[u] = timer++;
+			order.push_back(u);
+			for (int v : (*this)[u]) {
+				if (in_time[v] == no_parent) {
+					self(self, v);
+				}
+			}
+			out_time[u] = timer;
+		};
+		if (start_node != all_nodes) {
+			dfs(dfs, start_node);
+		} else {
+			for (size_t i = 0; i < n; i++) {
+				if (in_time[i] == no_parent) {
+					dfs(dfs, i);
+				}
+			}
+		}
+		return {std::move(order), std::move(in_time), std::move(out_time)};
+	}
 };
 
 template <class T> class graph : public graph<void> {
