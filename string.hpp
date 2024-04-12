@@ -17,7 +17,9 @@
 #include "sparse_table.hpp"
 #include "utilities.hpp"
 
-std::vector<int> prefix_function(std::ranges::random_access_range auto &&s) {
+template <std::ranges::random_access_range R>
+    requires std::ranges::sized_range<R>
+std::vector<int> prefix_function(R &&s) {
 	std::vector<int> pi(std::ranges::size(s));
 	for (int i = 1; i < std::ranges::ssize(s); i++) {
 		int j = pi[i - 1];
@@ -356,8 +358,9 @@ class ac_automation : trie<magic_vector<size_t>, size_t, std::plus<>, Charset> {
  * Implementation based on O(n lg n) algorithm from OI wiki
  * https://oi-wiki.org/string/sa/#onlogn-%E5%81%9A%E6%B3%95
  */
-std::pair<std::vector<int>, std::vector<int>>
-build_suffix_array(std::ranges::random_access_range auto &&s) {
+template <std::ranges::random_access_range R>
+    requires std::ranges::sized_range<R>
+std::pair<std::vector<int>, std::vector<int>> build_suffix_array(R &&s) {
 	int n = std::ranges::size(s);
 	int m = *std::ranges::max_element(s) + 1;
 
@@ -434,8 +437,9 @@ build_suffix_array(std::ranges::random_access_range auto &&s) {
 	return {std::move(sa), std::move(rank)};
 }
 
-std::vector<int> build_lcp(std::ranges::random_access_range auto &&s,
-                           const std::vector<int> &sa,
+template <std::ranges::random_access_range R>
+    requires std::ranges::sized_range<R>
+std::vector<int> build_lcp(R &&s, const std::vector<int> &sa,
                            const std::vector<int> &rank) {
 	int n = std::ranges::size(s);
 	std::vector<int> lcp(n);
@@ -454,33 +458,43 @@ std::vector<int> build_lcp(std::ranges::random_access_range auto &&s,
 }
 
 template <std::ranges::random_access_range R>
+    requires std::ranges::sized_range<R>
 std::vector<int> build_lcp(R &&s) {
 	auto [sa, rank] = build_suffix_array(std::forward<R>(s));
 	return build_lcp(std::forward<R>(s), sa, rank);
 }
 
-class suffix_array : public std::vector<int> {
-	std::string s;
+template <class T> class suffix_array : public std::vector<int> {
+	std::span<T> s;
 	std::vector<int> rank;
 	std::vector<int> lcp;
 
-	suffix_array(const std::string &s,
-	             const std::pair<vector<int>, vector<int>> &sa_result)
-	    : suffix_array(s, sa_result.first, sa_result.second) {}
+	template <std::ranges::random_access_range R>
+	    requires std::ranges::sized_range<R>
+	suffix_array(R &&s, const std::pair<vector<int>, vector<int>> &sa_result)
+	    : suffix_array(std::forward<R>(s), sa_result.first, sa_result.second) {}
 
   public:
-	suffix_array(const std::string &s, const std::vector<int> &sa,
+	template <std::ranges::random_access_range R>
+	    requires std::ranges::sized_range<R>
+	suffix_array(R &&s, const std::vector<int> &sa,
 	             const std::vector<int> &rank, const std::vector<int> &lcp)
 	    : vector<int>(sa), s(s), rank(rank), lcp(lcp) {}
-	suffix_array(const std::string &s, const std::vector<int> &sa,
+	template <std::ranges::random_access_range R>
+	    requires std::ranges::sized_range<R>
+	suffix_array(R &&s, const std::vector<int> &sa,
 	             const std::vector<int> &rank)
-	    : suffix_array(s, sa, rank, build_lcp(s, sa, rank)) {}
-	suffix_array(const std::string &s)
-	    : suffix_array(s, build_suffix_array(s)) {}
+	    : suffix_array(std::forward<R>(s), sa, rank,
+	                   build_lcp(std::forward<R>(s), sa, rank)) {}
+	template <std::ranges::random_access_range R>
+	    requires std::ranges::sized_range<R>
+	suffix_array(R &&s)
+	    : suffix_array(std::forward<R>(s),
+	                   build_suffix_array(std::forward<R>(s))) {}
 
 	// accessors
-	std::string &str() { return s; }
-	const std::string &str() const { return s; }
+	std::span<T> &str() { return s; }
+	const std::span<T> &str() const { return s; }
 	std::vector<int> &get_sa() { return *this; }
 	const std::vector<int> &get_sa() const { return *this; }
 	std::vector<int> &get_rank() { return rank; }
@@ -489,7 +503,7 @@ class suffix_array : public std::vector<int> {
 	const std::vector<int> &get_lcp() const { return lcp; }
 
 	size_t count_unique_substrings() const {
-		size_t n = s.size();
+		size_t n = std::ranges::size(s);
 		size_t ans = n * (n + 1) / 2;
 		for (auto lcp_i : lcp) {
 			ans -= lcp_i;
@@ -524,49 +538,40 @@ class suffix_array : public std::vector<int> {
 		return longest_common_prefix_table(*this);
 	}
 
-	/**
-	 * Substring search and count functions.
-	 * Use string_view to avoid expensive substring copy operations.
-	 */
-	auto lower_bound(const std::string &t) {
-		std::string_view s_view(s);
-		return std::ranges::lower_bound(
-		    *this, t, std::ranges::less{},
-		    [&s_view, &t](int i) { return s_view.substr(i, t.size()); });
+/**
+ * Substring search and count functions.
+ */
+#define BINARY_SEARCH_FUNC(NAME)                                               \
+	template <class R> auto NAME(R &&t) const {                                \
+		auto cmp = []<class R1, class R2>(R1 &&r1, R2 &&r2) {                  \
+			return std::ranges::lexicographical_compare(r1, r2);               \
+		};                                                                     \
+		return std::ranges::NAME(*this, t, cmp, [this, &t](int i) {            \
+			return s.subspan(i, std::ranges::size(t));                         \
+		});                                                                    \
+	}                                                                          \
+	template <class R> auto NAME(R &&t) {                                      \
+		auto cmp = []<class R1, class R2>(R1 &&r1, R2 &&r2) {                  \
+			return std::ranges::lexicographical_compare(r1, r2);               \
+		};                                                                     \
+		return std::ranges::NAME(*this, t, cmp, [this, &t](int i) {            \
+			return s.subspan(i, std::ranges::size(t));                         \
+		});                                                                    \
 	}
-	auto lower_bound(const std::string &t) const {
-		std::string_view s_view(s);
-		return std::ranges::lower_bound(
-		    *this, t, std::ranges::less{},
-		    [&s_view, &t](int i) { return s_view.substr(i, t.size()); });
-	}
-	auto upper_bound(const std::string &t) {
-		std::string_view s_view(s);
-		return std::ranges::upper_bound(
-		    *this, t, std::ranges::less{},
-		    [&s_view, &t](int i) { return s_view.substr(i, t.size()); });
-	}
-	auto upper_bound(const std::string &t) const {
-		std::string_view s_view(s);
-		return std::ranges::upper_bound(
-		    *this, t, std::ranges::less{},
-		    [&s_view, &t](int i) { return s_view.substr(i, t.size()); });
-	}
-	auto equal_range(const std::string &t) {
-		std::string_view s_view(s);
-		return std::ranges::equal_range(
-		    *this, t, std::ranges::less{},
-		    [&s_view, &t](int i) { return s_view.substr(i, t.size()); });
-	}
-	auto equal_range(const std::string &t) const {
-		std::string_view s_view(s);
-		return std::ranges::equal_range(
-		    *this, t, std::ranges::less{},
-		    [&s_view, &t](int i) { return s_view.substr(i, t.size()); });
-	}
-	auto count(const std::string &t) const {
-		return std::ranges::distance(equal_range(t));
+
+	BINARY_SEARCH_FUNC(lower_bound)
+	BINARY_SEARCH_FUNC(upper_bound)
+	BINARY_SEARCH_FUNC(binary_search)
+	BINARY_SEARCH_FUNC(equal_range)
+
+#undef BINARY_SEARCH_FUNC
+
+	template <class R> auto count(R &&t) const {
+		return std::ranges::distance(equal_range(std::forward<R>(t)));
 	}
 };
+template <class R>
+suffix_array(R &&)
+    -> suffix_array<std::remove_reference_t<std::ranges::range_reference_t<R>>>;
 
 #endif

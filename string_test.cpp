@@ -132,10 +132,12 @@ TEST_CASE("lcp construction", "[string]") {
 }
 
 TEST_CASE("suffix array applications", "[string]") {
-	suffix_array sa("ababba");
+	using namespace std::literals;
+	std::string s = "ababba"s;
+	suffix_array sa(s);
 	REQUIRE(sa.count_unique_substrings() == 15);
-	REQUIRE(sa.count("ab") == 2);
-	REQUIRE(std::ranges::equal(sa.equal_range("ab"), std::vector<int>{0, 2}));
+	REQUIRE(sa.count("ab"s) == 2);
+	REQUIRE(std::ranges::equal(sa.equal_range("ab"s), std::vector<int>{0, 2}));
 	auto lcp_table = sa.longest_common_prefix();
 	REQUIRE(lcp_table.query(0, 2) == 2);
 	REQUIRE(lcp_table.query(1, 3) == 1);
