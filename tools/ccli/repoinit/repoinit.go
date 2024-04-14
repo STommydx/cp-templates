@@ -59,6 +59,30 @@ func Run(settings Settings) error {
 	}); err != nil {
 		return err
 	}
+	templateFiles := []string{
+		".gitignore",
+		".clang-format",
+	}
+	if err := spinner.Run("Create template files", func() error {
+		for _, templateFilename := range templateFiles {
+			templateFile, err := templatesFS.Open(path.Join("templates", templateFilename))
+			if err != nil {
+				return fmt.Errorf("failed to open template file %s: %w", templateFilename, err)
+			}
+			defer templateFile.Close()
+			file, err := os.Create(path.Join(settings.Directory, templateFilename))
+			if err != nil {
+				return fmt.Errorf("failed to create file: %w", err)
+			}
+			defer file.Close()
+			if _, err := io.Copy(file, templateFile); err != nil {
+				return fmt.Errorf("failed to copy template file: %w", err)
+			}
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
 	if err := spinner.Run("Initialize git repository", func() error {
 		repo, err := git.PlainInit(settings.Directory, false)
 		if err != nil {
