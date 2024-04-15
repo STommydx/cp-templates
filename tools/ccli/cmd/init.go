@@ -10,6 +10,7 @@ import (
 
 var mainProgramCount int
 var templateRepository string
+var includeTestlib bool
 
 var initCmd = &cobra.Command{
 	Use:   "init [directory]",
@@ -25,6 +26,7 @@ var initCmd = &cobra.Command{
 			Directory:             directory,
 			NumberOfMainPrograms:  mainProgramCount,
 			TemplateRepositoryUrl: templateRepository,
+			IncludeTestlib:        includeTestlib,
 		}); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
@@ -36,4 +38,5 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 	initCmd.Flags().IntVarP(&mainProgramCount, "count", "c", 7, "Number of main program files to create")
 	initCmd.Flags().StringVarP(&templateRepository, "repository", "r", "https://github.com/STommydx/cp-templates.git", "URL of template repository")
+	initCmd.Flags().BoolVarP(&includeTestlib, "testlib", "t", false, "Include testlib library for problem preparation")
 }

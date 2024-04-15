@@ -41,7 +41,7 @@ func Pack(settings PackSettings) error {
 		}
 		return nil
 	}
-	if spinner.Run("Pack source files", func() error {
+	if err := spinner.Run("Pack source files", func() error {
 		outputFile, err := os.Create(settings.OutputPath)
 		if err != nil {
 			return fmt.Errorf("failed to create output file: %w", err)
@@ -68,9 +68,29 @@ func Pack(settings PackSettings) error {
 				for scanner.Scan() {
 					if matches := includeRegex.FindStringSubmatch(scanner.Text()); matches != nil {
 						matchedFilePath := matches[1]
-						includedFilePath := filepath.Join(sourceFileDir, matchedFilePath)
-						if err := parseAndWriteSourceFile(includedFilePath); err != nil {
-							return fmt.Errorf("failed to write included file %s: %w", matchedFilePath, err)
+						if matchedFilePath != "testlib.h" {
+							includedFilePath := filepath.Join(sourceFileDir, matchedFilePath)
+							if err := parseAndWriteSourceFile(includedFilePath); err != nil {
+								return fmt.Errorf("failed to write included file %s: %w", matchedFilePath, err)
+							}
+						} else {
+							if _, err := writer.WriteString(scanner.Text()); err != nil {
+								return fmt.Errorf("failed to write to output file: %w", err)
+							}
+							if _, err := writer.WriteRune('\n'); err != nil {
+								return fmt.Errorf("failed to write to output file: %w", err)
+							}
+							outputDir := filepath.Dir(settings.OutputPath)
+							testlibOutputPath := filepath.Join(outputDir, "testlib.h")
+							if _, err := os.Stat(testlibOutputPath); os.IsNotExist(err) {
+								testlibRelPath, err := filepath.Rel(outputDir, filepath.Join(sourceFileDir, "testlib.h"))
+								if err != nil {
+									return fmt.Errorf("failed to get relative path for testlib: %w", err)
+								}
+								if err := os.Symlink(testlibRelPath, testlibOutputPath); err != nil {
+									return fmt.Errorf("failed to create symlink for testlib: %w", err)
+								}
+							}
 						}
 					} else {
 						if _, err := writer.WriteString(scanner.Text()); err != nil {
@@ -88,8 +108,8 @@ func Pack(settings PackSettings) error {
 			}
 		}
 		return nil
-	}) != nil {
-		return nil
+	}); err != nil {
+		return err
 	}
 	return nil
 }
