@@ -54,7 +54,7 @@ func Run(settings Settings) error {
 		}
 		if !settings.IncludeTestlib {
 			for i := 1; i <= settings.NumberOfMainPrograms; i++ {
-				if err := copyFile("main.cpp", fmt.Sprintf("main%c.cpp", rune(64+i))); err != nil {
+				if err := copyFile("main.cpp", fmt.Sprintf("%c.cpp", rune(64+i))); err != nil {
 					return err
 				}
 			}
