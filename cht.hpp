@@ -113,7 +113,7 @@ class lichao_tree {
 			tree_idx[u] = line_idx;
 			return;
 		}
-		auto mi = lo + (hi - lo) / 2;
+		auto mi = std::midpoint(lo, hi);
 		bool dominate_left = comp(
 		    std::pair<result_type, size_t>(eval(line, lo), line_idx),
 		    std::pair<result_type, size_t>(eval(*tree[u], lo), tree_idx[u]));
@@ -146,7 +146,7 @@ class lichao_tree {
 			push_line(line, line_idx, u, lo, hi);
 			return;
 		}
-		auto mi = lo + (hi - lo) / 2;
+		auto mi = std::midpoint(lo, hi);
 		if (l < mi && r > lo) {
 			if (!left_child[u])
 				left_child[u] = create_node(lo, mi);
@@ -167,7 +167,7 @@ class lichao_tree {
 		if (hi - lo == 1) {
 			return result;
 		}
-		auto mi = lo + (hi - lo) / 2;
+		auto mi = std::midpoint(lo, hi);
 		if (x < mi) {
 			if (left_child[u]) {
 				auto left_result = query(x, left_child[u], lo, mi);

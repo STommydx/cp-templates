@@ -8,6 +8,8 @@
 
 #include "functional.hpp"
 
+#include <numeric>
+
 template <class T, class U = T, class CombineOp = std::plus<>,
           class UpdateOp = std::plus<>>
 class classic_segment_tree {
@@ -34,7 +36,7 @@ class classic_segment_tree {
 		if (lo == hi) {
 			tree[p] = init[lo];
 		} else {
-			size_t mi = lo + (hi - lo) / 2;
+			size_t mi = std::midpoint(lo, hi);
 			auto ul = get_left_index(p, lo, hi),
 			     ur = get_right_index(p, lo, hi);
 			build(init, ul, lo, mi);
@@ -47,7 +49,7 @@ class classic_segment_tree {
 		if (lo == hi) {
 			tree[u] = updater(tree[u], val);
 		} else {
-			size_t mi = lo + (hi - lo) / 2;
+			size_t mi = std::midpoint(lo, hi);
 			auto ul = get_left_index(u, lo, hi),
 			     ur = get_right_index(u, lo, hi);
 			if (p <= mi) {
@@ -63,7 +65,7 @@ class classic_segment_tree {
 		if (l == lo && r == hi) {
 			return tree[u];
 		}
-		size_t mi = lo + (hi - lo) / 2;
+		size_t mi = std::midpoint(lo, hi);
 		if (r <= mi) {
 			return query(l, r, get_left_index(u, lo, hi), lo, mi);
 		}
@@ -83,7 +85,7 @@ class classic_segment_tree {
 		if (lo == hi) {
 			return lo;
 		}
-		size_t mi = lo + (hi - lo) / 2;
+		size_t mi = std::midpoint(lo, hi);
 		if (l <= mi) {
 			if (size_t l_res = find(l, get_left_index(u, lo, hi), lo, mi, pred);
 			    l_res != npos) {
@@ -159,7 +161,7 @@ class classic_lazy_segment_tree {
 		if (lo == hi) {
 			tree[p] = init[lo];
 		} else {
-			size_t mi = lo + (hi - lo) / 2;
+			size_t mi = std::midpoint(lo, hi);
 			auto ul = get_left_index(p, lo, hi),
 			     ur = get_right_index(p, lo, hi);
 			build(init, ul, lo, mi);
@@ -175,7 +177,7 @@ class classic_lazy_segment_tree {
 
 	void push(size_t p, size_t lo, size_t hi) {
 		if (lazy[p]) {
-			auto mi = lo + (hi - lo) / 2;
+			auto mi = std::midpoint(lo, hi);
 			auto ul = get_left_index(p, lo, hi),
 			     ur = get_right_index(p, lo, hi);
 			apply(ul, *lazy[p], lo, mi);
@@ -191,7 +193,7 @@ class classic_lazy_segment_tree {
 			return;
 		}
 		push(u, lo, hi);
-		size_t mi = lo + (hi - lo) / 2;
+		size_t mi = std::midpoint(lo, hi);
 		auto ul = get_left_index(u, lo, hi), ur = get_right_index(u, lo, hi);
 		if (l <= mi) {
 			modify(l, r, val, ul, lo, mi);
@@ -207,7 +209,7 @@ class classic_lazy_segment_tree {
 			return tree[u];
 		}
 		push(u, lo, hi);
-		size_t mi = lo + (hi - lo) / 2;
+		size_t mi = std::midpoint(lo, hi);
 		auto ul = get_left_index(u, lo, hi), ur = get_right_index(u, lo, hi);
 		if (r <= mi) {
 			return query(l, r, ul, lo, mi);
@@ -227,7 +229,7 @@ class classic_lazy_segment_tree {
 			return lo;
 		}
 		push(u, lo, hi);
-		size_t mi = lo + (hi - lo) / 2;
+		size_t mi = std::midpoint(lo, hi);
 		if (l <= mi) {
 			if (size_t l_res = find(l, get_left_index(u, lo, hi), lo, mi, pred);
 			    l_res != npos) {
@@ -295,12 +297,12 @@ class dynamic_segment_tree {
 	size_t get_root_index() const { return root; }
 	size_t get_left_index(size_t p, SizeType lo, SizeType hi) {
 		if (!left_child[p])
-			left_child[p] = create_node(lo, lo + (hi - lo) / 2);
+			left_child[p] = create_node(lo, std::midpoint(lo, hi));
 		return left_child[p];
 	}
 	size_t get_right_index(size_t p, SizeType lo, SizeType hi) {
 		if (!right_child[p])
-			right_child[p] = create_node(lo + (hi - lo) / 2 + 1, hi);
+			right_child[p] = create_node(std::midpoint(lo, hi) + 1, hi);
 		return right_child[p];
 	}
 
@@ -316,7 +318,7 @@ class dynamic_segment_tree {
 		if (lo == hi) {
 			tree[p] = init[lo];
 		} else {
-			size_t mi = lo + (hi - lo) / 2;
+			size_t mi = std::midpoint(lo, hi);
 			auto ul = get_left_index(p, lo, hi),
 			     ur = get_right_index(p, lo, hi);
 			build(init, ul, lo, mi);
@@ -332,7 +334,7 @@ class dynamic_segment_tree {
 
 	void push(size_t p, SizeType lo, SizeType hi) {
 		if (lazy[p]) {
-			auto mi = lo + (hi - lo) / 2;
+			auto mi = std::midpoint(lo, hi);
 			auto ul = get_left_index(p, lo, hi),
 			     ur = get_right_index(p, lo, hi);
 			apply(ul, *lazy[p], lo, mi);
@@ -348,7 +350,7 @@ class dynamic_segment_tree {
 			return;
 		}
 		push(u, lo, hi);
-		SizeType mi = lo + (hi - lo) / 2;
+		SizeType mi = std::midpoint(lo, hi);
 		auto ul = get_left_index(u, lo, hi), ur = get_right_index(u, lo, hi);
 		if (l <= mi) {
 			modify(l, r, val, ul, lo, mi);
@@ -364,7 +366,7 @@ class dynamic_segment_tree {
 			return tree[u];
 		}
 		push(u, lo, hi);
-		SizeType mi = lo + (hi - lo) / 2;
+		SizeType mi = std::midpoint(lo, hi);
 		auto ul = get_left_index(u, lo, hi), ur = get_right_index(u, lo, hi);
 		if (r <= mi) {
 			return query(l, r, ul, lo, mi);
