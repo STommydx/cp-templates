@@ -45,7 +45,7 @@ class mo {
 		std::iota(query_order.begin(), query_order.end(), 0);
 		std::ranges::sort(query_order, {}, [&](int i) {
 			auto &[ql, qr] = queries[i];
-			return std::make_pair(block(ql), block(ql) ? qr : -qr);
+			return std::make_pair(block(ql), (block(ql) & 1) ? qr : -qr);
 		});
 		std::vector<T> result(queries.size());
 		int l = 0, r = -1;
