@@ -7,6 +7,7 @@
 #define MODINT_HPP
 
 #include <iostream>
+#include <string>
 
 template <std::signed_integral T = int, T MOD = 1'000'000'007> class modint;
 
@@ -29,6 +30,10 @@ template <std::signed_integral T, T MOD> class modint {
 			this->x += MOD;
 	}
 	constexpr modint(const std::signed_integral auto &x) : modint(T(x % MOD)) {}
+	constexpr modint(const std::string &s) : x{} {
+		for (char c : s)
+			*this *= 10, *this += c - '0';
+	}
 	constexpr modint() : x{} {}
 
 	constexpr modint &operator+=(const modint &rhs) {
