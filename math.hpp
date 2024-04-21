@@ -8,7 +8,9 @@
 
 #include <array>
 #include <bit>
+#include <bitset>
 #include <concepts>
+#include <vector>
 
 template <std::unsigned_integral T> constexpr T isqrt(T x) {
 	T guess = 0;
@@ -41,25 +43,60 @@ template <std::integral T> constexpr auto fraction_cmp(T a, T b, T c, T d) {
 	return fraction_cmp(d, c, b, a);
 }
 
-template <int N> class prime_sieve {
-	std::array<int, N> min_prime_factor;
+template <size_t N> class prime_sieve {
+	std::array<unsigned int, N> min_prime_factor;
 
   public:
 	constexpr prime_sieve() {
 		min_prime_factor.fill(0);
-		for (int i = 2; i < N; i++) {
+		for (size_t i = 2; i < N; i++) {
 			if (!min_prime_factor[i]) {
 				min_prime_factor[i] = i;
-				if (1LL * i * i >= N)
+				if (1uLL * i * i >= N)
 					continue;
-				for (int j = i * i; j < N; j += i)
+				for (size_t j = i * i; j < N; j += i)
 					if (!min_prime_factor[j])
 						min_prime_factor[j] = i;
 			}
 		}
 	}
-	constexpr int operator[](int n) const { return min_prime_factor[n]; }
-	constexpr bool is_prime(int n) const { return min_prime_factor[n] == n; }
+	constexpr int operator[](size_t n) const { return min_prime_factor[n]; }
+	constexpr bool is_prime(size_t n) const { return min_prime_factor[n] == n; }
+	constexpr std::vector<int> primes() const {
+		std::vector<int> primes;
+		for (size_t i = 2; i < N; i++)
+			if (is_prime(i))
+				primes.push_back(i);
+		return primes;
+	}
+};
+
+template <size_t N> class prime_sieve_bitset {
+	std::bitset<N> prime;
+
+  public:
+	// note that member functions of std::bitset are constexpr since C++23
+	prime_sieve_bitset() {
+		prime.set();
+		prime[0] = prime[1] = false;
+		for (size_t i = 2; i < N; i++) {
+			if (prime[i]) {
+				if (1uLL * i * i >= N)
+					continue;
+				for (size_t j = i * i; j < N; j += i)
+					prime[j] = false;
+			}
+		}
+	}
+	bool operator[](size_t n) const { return prime[n]; }
+	bool is_prime(size_t n) const { return prime[n]; }
+	std::vector<int> primes() const {
+		std::vector<int> primes;
+		for (size_t i = 0; i < N; i++)
+			if (prime[i])
+				primes.push_back(i);
+		return primes;
+	}
 };
 
 #endif

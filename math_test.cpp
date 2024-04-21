@@ -51,3 +51,19 @@ TEST_CASE("prime sieve works as expected", "[math]") {
 	REQUIRE(ps.is_prime(89) == true);
 	REQUIRE(ps.is_prime(92) == false);
 }
+
+TEST_CASE("prime sieve bitset version works as expected", "[math]") {
+	prime_sieve_bitset<100> ps;
+	REQUIRE(ps[2]);
+	REQUIRE(!ps[6]);
+	REQUIRE(!ps[15]);
+	REQUIRE(ps[17]);
+	REQUIRE(ps[97]);
+	REQUIRE(!ps[99]);
+	REQUIRE(ps.is_prime(4) == false);
+	REQUIRE(ps.is_prime(5) == true);
+	REQUIRE(ps.is_prime(47) == true);
+	REQUIRE(ps.is_prime(80) == false);
+	REQUIRE(ps.is_prime(89) == true);
+	REQUIRE(ps.is_prime(92) == false);
+}
