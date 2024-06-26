@@ -37,12 +37,12 @@ func Run(settings Settings) error {
 	}
 	if err := spinner.Run("Create main program files", func() error {
 		copyFile := func(source, destination string) error {
-			templateFile, err := templatesFS.Open(filepath.Join("templates", source))
+			templateFile, err := templatesFS.Open(path.Join("templates", source))
 			if err != nil {
 				return fmt.Errorf("failed to open template file: %w", err)
 			}
 			defer templateFile.Close()
-			file, err := os.Create(path.Join(settings.Directory, destination))
+			file, err := os.Create(filepath.Join(settings.Directory, destination))
 			if err != nil {
 				return fmt.Errorf("failed to create file: %w", err)
 			}
