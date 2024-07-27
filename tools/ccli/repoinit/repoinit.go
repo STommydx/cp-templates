@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
+	"text/template"
 
 	"github.com/STommydx/cp-templates/tools/ccli/spinner"
 	"github.com/go-git/go-git/v5"
@@ -98,6 +100,39 @@ func Run(settings Settings) error {
 			if _, err := io.Copy(file, templateFile); err != nil {
 				return fmt.Errorf("failed to copy template file: %w", err)
 			}
+		}
+		cmakeConfig := struct {
+			ProjectName string
+			SourceFiles []struct {
+				Input  string
+				Output string
+			}
+		}{
+			ProjectName: path.Base(settings.Directory),
+		}
+		files, err := os.ReadDir(settings.Directory)
+		if err != nil {
+			return fmt.Errorf("failed to read directory: %w", err)
+		}
+		for _, file := range files {
+			if filepath.Ext(file.Name()) == ".cpp" {
+				cmakeConfig.SourceFiles = append(cmakeConfig.SourceFiles, struct {
+					Input  string
+					Output string
+				}{
+					Input:  file.Name(),
+					Output: strings.ReplaceAll(file.Name(), ".cpp", ".out"),
+				})
+			}
+		}
+		cmakeListFile, err := os.Create(path.Join(settings.Directory, "CMakeLists.txt"))
+		if err != nil {
+			return fmt.Errorf("failed to create CMakeLists.txt file: %w", err)
+		}
+		defer cmakeListFile.Close()
+		cmakeListTemplate := template.Must(template.ParseFS(templatesFS, "templates/CMakeLists.txt.tmpl"))
+		if err := cmakeListTemplate.Execute(cmakeListFile, cmakeConfig); err != nil {
+			return fmt.Errorf("failed to execute CMakeLists.txt template: %w", err)
 		}
 		return nil
 	}); err != nil {

@@ -1,0 +1,25 @@
+cmake_minimum_required(VERSION 3.14)
+
+project(
+    {{ .ProjectName }}
+)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Debug)
+endif()
+
+set(CMAKE_CXX_STANDARD 20)
+add_compile_options("$<$<CONFIG:Debug>:-Og>")
+add_compile_options("$<$<CONFIG:Release>:-O2>")
+add_compile_options(-Wall)
+add_compile_options(-Wextra)
+add_compile_options(-fsanitize=address)
+add_compile_options(-fsanitize=undefined)
+add_link_options(-fsanitize=address)
+add_link_options(-fsanitize=undefined)
+
+{{ range .SourceFiles -}}
+add_executable({{ .Output }} {{ .Input }})
+{{ end }}
