@@ -32,6 +32,26 @@ std::vector<int> prefix_function(R &&s) {
 	return pi;
 }
 
+template <std::ranges::random_access_range R>
+    requires std::ranges::sized_range<R>
+std::vector<int> z_function(R &&s) {
+	std::vector<int> z(std::ranges::size(s));
+	int l = 0, r = 0;
+	for (int i = 1; i < std::ranges::ssize(s); i++) {
+		if (i < r) {
+			z[i] = std::min(r - i, z[i - l]);
+		}
+		while (i + z[i] < std::ranges::ssize(s) && s[z[i]] == s[i + z[i]]) {
+			z[i]++;
+		}
+		if (i + z[i] > r) {
+			l = i;
+			r = i + z[i];
+		}
+	}
+	return z;
+}
+
 std::vector<int> kmp(const std::string &str, const std::string &pattern) {
 	std::vector<int> pi = prefix_function(pattern + "#" + str);
 	std::vector<int> result;
