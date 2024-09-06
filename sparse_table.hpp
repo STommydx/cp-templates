@@ -44,10 +44,12 @@ template <class T, class Op = std::bit_or<>> class sparse_table_matrix {
 	                    const Op &comb = {})
 	    : nx(init.size()), ny(init[0].size()), mx(std::bit_width(nx)), dp(mx),
 	      op(comb) {
+		dp[0].reserve(nx);
 		for (size_t i = 0; i < nx; i++) {
 			dp[0].emplace_back(init[i], comb);
 		}
 		for (size_t j = 1; j < mx; j++) {
+			dp[j].reserve(nx);
 			for (size_t i = 0; i + (1 << j) <= nx; i++) {
 				std::vector<T> w(ny);
 				for (size_t k = 0; k < ny; k++) {
