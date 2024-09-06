@@ -46,6 +46,8 @@ class segment_tree {
 			tree[p] = combinator(tree[p << 1], tree[p << 1 | 1]);
 	}
 
+	T query(size_t l) const { return tree[l + n]; }
+
 	T query(size_t l, size_t r) const {
 		std::optional<T> resl, resr;
 		for (l += n, r += n + 1; l < r; l >>= 1, r >>= 1) {
