@@ -6,6 +6,8 @@
 #ifndef CLASSIC_SEGMENT_TREE_HPP
 #define CLASSIC_SEGMENT_TREE_HPP
 
+#include <optional>
+
 #include "functional.hpp"
 
 template <class T, class U = T, class CombineOp = std::plus<>,

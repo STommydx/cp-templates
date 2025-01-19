@@ -6,9 +6,9 @@
 #ifndef IO_HPP
 #define IO_HPP
 
+#include <deque>
 #include <functional>
 #include <iostream>
-#include <queue>
 #include <ranges>
 #include <valarray>
 #include <vector>

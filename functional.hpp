@@ -10,7 +10,6 @@
 #include <algorithm>
 #include <functional>
 #include <numeric>
-#include <ranges>
 
 namespace fn {
 template <class T = void, class Proj = std::identity,

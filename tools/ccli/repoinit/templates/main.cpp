@@ -1,4 +1,5 @@
 #include "templates/commons.hpp"
+#include "templates/io.hpp"
 
 #include <iostream>
 using namespace std;
@@ -6,7 +7,7 @@ using namespace std;
 int no_of_test_cases = -1;
 
 int solve() {
-
+	// Start here! Navigate to this line and press `cc`.
 	return 0;
 }
 
