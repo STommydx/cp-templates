@@ -6,7 +6,6 @@
 #ifndef GRAPH_HPP
 #define GRAPH_HPP
 
-#include <bit>
 #include <iostream>
 #include <optional>
 #include <queue>
@@ -505,61 +504,5 @@ template <class T, int base = 1>
 _get_graph<T, false, base> get_undirected_tree(graph<T> &g) {
 	return _get_graph<T, false, base>{g, static_cast<int>(std::ssize(g) - 1)};
 }
-
-template <class T = void, class Op = std::plus<>, bool VertexQuery = true>
-class lca;
-
-template <class Op, bool VertexQuery> class lca<void, Op, VertexQuery> {
-  protected:
-	size_t n, m;
-	std::vector<int> depth;
-	std::vector<std::vector<int>> dp;
-
-	explicit lca(const graph<void>::dfs_traversal_result &r)
-	    : lca(get<3>(r), get<2>(r)) {}
-
-  public:
-	static constexpr int no_parent = -1;
-
-	explicit lca(const std::vector<int> &parents,
-	             const std::vector<int> &depth = {})
-	    : n(parents.size()), m(std::bit_width(n)), depth(depth),
-	      dp(m, std::vector<int>(n, no_parent)) {
-		dp[0] = parents;
-		for (size_t j = 1; j < m; j++) {
-			for (size_t i = 0; i < n; i++) {
-				if (dp[j - 1][i] == no_parent)
-					continue;
-				dp[j][i] = dp[j - 1][dp[j - 1][i]];
-			}
-		}
-	}
-	explicit lca(const graph<void> &g, int root = graph<void>::all_nodes)
-	    : lca(g.dfs_traversal(root)) {}
-
-	int kth_ancestor(int u, int k) const {
-		for (size_t j = 0; j < m && k > 0; j++, k >>= 1) {
-			if (k & 1) {
-				u = dp[j][u];
-			}
-			if (u == no_parent)
-				return no_parent;
-		}
-		return k > 0 ? no_parent : u;
-	}
-
-	int operator()(int u, int v) const {
-		if (depth[u] > depth[v])
-			std::swap(u, v);
-		while (depth[v] > depth[u])
-			v = dp[std::bit_width<unsigned int>(depth[v] - depth[u]) - 1][v];
-		if (u == v)
-			return v;
-		for (int j = std::bit_width<unsigned int>(depth[v]) - 1; j >= 0; j--)
-			if (dp[j][u] != dp[j][v])
-				u = dp[j][u], v = dp[j][v];
-		return dp[0][u];
-	}
-};
 
 #endif
