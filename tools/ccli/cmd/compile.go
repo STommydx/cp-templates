@@ -12,6 +12,7 @@ import (
 
 var compilationFlags string
 var submissionPath string
+var packSubmission bool
 
 var compileCmd = &cobra.Command{
 	Use:   "compile [-f flags] [-s submission] [-o output] source...",
@@ -22,15 +23,17 @@ This command compiles source files to binary. This also packs source files into 
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		sourceFileName := path.Base(args[0])
-		if submissionPath == "" {
-			submissionPath = path.Join("./submissions/", sourceFileName)
-		}
-		if err := submission.Pack(submission.PackSettings{
-			SourceFiles: args,
-			OutputPath:  submissionPath,
-		}); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+		if packSubmission {
+			if submissionPath == "" {
+				submissionPath = path.Join("./submissions/", sourceFileName)
+			}
+			if err := submission.Pack(submission.PackSettings{
+				SourceFiles: args,
+				OutputPath:  submissionPath,
+			}); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
 		}
 		if outputPath == "" {
 			outputFileName := strings.ReplaceAll(sourceFileName, ".cpp", ".out")
@@ -49,6 +52,7 @@ This command compiles source files to binary. This also packs source files into 
 
 func init() {
 	rootCmd.AddCommand(compileCmd)
+	compileCmd.Flags().BoolVarP(&packSubmission, "pack", "p", true, "Pack source files into a single file for online judge submissions")
 	compileCmd.Flags().StringVarP(&outputPath, "output", "o", "", "Output file path")
 	compileCmd.Flags().StringVarP(&submissionPath, "submission", "s", "", "Submission file path")
 	compileCmd.Flags().StringVarP(&compilationFlags, "flag", "f", "-std=c++20 -Wall -Wextra -g -fsanitize=address -fsanitize=undefined", "Compilation flags")
