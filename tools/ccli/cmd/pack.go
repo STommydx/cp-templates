@@ -1,10 +1,10 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"path"
 
+	"github.com/STommydx/cp-templates/tools/ccli/output"
 	"github.com/STommydx/cp-templates/tools/ccli/submission"
 	"github.com/spf13/cobra"
 )
@@ -17,15 +17,16 @@ var packCmd = &cobra.Command{
 	Long:  `Pack source files into a single file for online judge submissions.`,
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		out := output.NewTerminalOutputter(os.Stderr)
 		sourceFileName := path.Base(args[0])
 		if outputPath == "" {
 			outputPath = path.Join("./submissions/", sourceFileName)
 		}
-		if err := submission.Pack(submission.PackSettings{
+		if err := submission.PackWithOutput(submission.PackSettings{
 			SourceFiles: args,
 			OutputPath:  outputPath,
-		}); err != nil {
-			fmt.Fprintln(os.Stderr, err)
+		}, out); err != nil {
+			out.Error(err.Error())
 			os.Exit(1)
 		}
 	},
