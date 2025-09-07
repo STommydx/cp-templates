@@ -1,12 +1,12 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
+	"github.com/STommydx/cp-templates/tools/ccli/output"
 	"github.com/STommydx/cp-templates/tools/ccli/submission"
 	"github.com/spf13/cobra"
 )
@@ -20,16 +20,17 @@ Compile source files to binary and execute it. This also packs source files into
 The exit code and time elapsed are printed after successful execution.`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		out := output.NewTerminalOutputter(os.Stderr)
 		sourceFileName := path.Base(args[0])
 		if packSubmission {
 			if submissionPath == "" {
 				submissionPath = path.Join("./submissions/", sourceFileName)
 			}
-			if err := submission.Pack(submission.PackSettings{
+			if err := submission.PackWithOutput(submission.PackSettings{
 				SourceFiles: args,
 				OutputPath:  submissionPath,
-			}); err != nil {
-				fmt.Fprintln(os.Stderr, err)
+			}, out); err != nil {
+				out.Error(err.Error())
 				os.Exit(1)
 			}
 		}
@@ -37,23 +38,23 @@ The exit code and time elapsed are printed after successful execution.`,
 			outputFileName := strings.ReplaceAll(sourceFileName, ".cpp", ".out")
 			outputPath = path.Join("./build/", outputFileName)
 		}
-		if err := submission.Compile(submission.CompileSettings{
+		if err := submission.CompileWithOutput(submission.CompileSettings{
 			SourceFiles:      args,
 			OutputPath:       outputPath,
 			CompilationFlags: strings.Split(compilationFlags, " "),
-		}); err != nil {
-			fmt.Fprintln(os.Stderr, err)
+		}, out); err != nil {
+			out.Error(err.Error())
 			os.Exit(1)
 		}
 		absoluteOutputPath, err := filepath.Abs(outputPath)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			out.Error(err.Error())
 			os.Exit(1)
 		}
-		if err := submission.Run(submission.RunSettings{
+		if err := submission.RunWithOutput(submission.RunSettings{
 			ExecutablePath: absoluteOutputPath,
-		}); err != nil {
-			fmt.Fprintln(os.Stderr, err)
+		}, out); err != nil {
+			out.Error(err.Error())
 			os.Exit(1)
 		}
 	},

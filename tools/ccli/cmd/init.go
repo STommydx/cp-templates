@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
+	"github.com/STommydx/cp-templates/tools/ccli/output"
 	"github.com/STommydx/cp-templates/tools/ccli/repoinit"
 	"github.com/spf13/cobra"
 )
@@ -18,17 +18,18 @@ var initCmd = &cobra.Command{
 	Long:  `Initialize a new repository for programming contests. Creates configurable number of starting main program files and download templates to template folder.`,
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		out := output.NewTerminalOutputter(os.Stderr)
 		directory := "./"
 		if len(args) > 0 {
 			directory = args[0]
 		}
-		if err := repoinit.Run(repoinit.Settings{
+		if err := repoinit.RunWithOutput(repoinit.Settings{
 			Directory:             directory,
 			NumberOfMainPrograms:  mainProgramCount,
 			TemplateRepositoryUrl: templateRepository,
 			IncludeTestlib:        includeTestlib,
-		}); err != nil {
-			fmt.Fprintln(os.Stderr, err)
+		}, out); err != nil {
+			out.Error(err.Error())
 			os.Exit(1)
 		}
 	},

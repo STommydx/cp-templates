@@ -1,11 +1,11 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"strings"
 
+	"github.com/STommydx/cp-templates/tools/ccli/output"
 	"github.com/STommydx/cp-templates/tools/ccli/submission"
 	"github.com/spf13/cobra"
 )
@@ -22,16 +22,17 @@ var compileCmd = &cobra.Command{
 This command compiles source files to binary. This also packs source files into a single file for online judge submissions.`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		out := output.NewTerminalOutputter(os.Stderr)
 		sourceFileName := path.Base(args[0])
 		if packSubmission {
 			if submissionPath == "" {
 				submissionPath = path.Join("./submissions/", sourceFileName)
 			}
-			if err := submission.Pack(submission.PackSettings{
+			if err := submission.PackWithOutput(submission.PackSettings{
 				SourceFiles: args,
 				OutputPath:  submissionPath,
-			}); err != nil {
-				fmt.Fprintln(os.Stderr, err)
+			}, out); err != nil {
+				out.Error(err.Error())
 				os.Exit(1)
 			}
 		}
@@ -39,12 +40,12 @@ This command compiles source files to binary. This also packs source files into 
 			outputFileName := strings.ReplaceAll(sourceFileName, ".cpp", ".out")
 			outputPath = path.Join("./build/", outputFileName)
 		}
-		if err := submission.Compile(submission.CompileSettings{
+		if err := submission.CompileWithOutput(submission.CompileSettings{
 			SourceFiles:      []string{submissionPath},
 			OutputPath:       outputPath,
 			CompilationFlags: strings.Split(compilationFlags, " "),
-		}); err != nil {
-			fmt.Fprintln(os.Stderr, err)
+		}, out); err != nil {
+			out.Error(err.Error())
 			os.Exit(1)
 		}
 	},
