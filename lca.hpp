@@ -7,6 +7,8 @@
 #ifndef LCA_HPP
 #define LCA_HPP
 
+#include <bit>
+
 #include "graph.hpp"
 
 template <class T = void, class Op = std::plus<>, bool VertexQuery = true>
