@@ -41,6 +41,20 @@ template <std::integral T> constexpr auto fraction_cmp(T a, T b, T c, T d) {
 	return fraction_cmp(d, c, b, a);
 }
 
+template <std::integral T, class Comp = std::ranges::less>
+constexpr bool fraction_cmp_two_way(T a, T b, T c, T d, Comp comp = {}) {
+	if (b < 0)
+		a = -a, b = -b;
+	if (d < 0)
+		c = -c, d = -d;
+	if (comp(a / b, c / d) || comp(c / d, a / b))
+		return comp(a / b, c / d);
+	a %= b, c %= d;
+	if (a == 0 || c == 0)
+		return comp(a, c);
+	return fraction_cmp_two_way(d, c, b, a, comp);
+}
+
 template <int N> class prime_sieve {
 	std::array<int, N> min_prime_factor;
 

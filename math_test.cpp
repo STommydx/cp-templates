@@ -34,6 +34,24 @@ TEST_CASE("fraction_cmp behaves as expected", "[math]") {
 	                     9'999'999'998LL) < 0);
 }
 
+TEST_CASE("fraction_cmp_two_way behaves as expected", "[math]") {
+	REQUIRE(!fraction_cmp_two_way(2, 5, 4, 10));
+	REQUIRE(!fraction_cmp_two_way(4, 10, 2, 5));
+	REQUIRE(fraction_cmp_two_way(2, 3, 3, 4));
+	REQUIRE(!fraction_cmp_two_way(22, 7, 314, 100));
+	REQUIRE(!fraction_cmp_two_way(-1, 2, 1, 2));
+	REQUIRE(!fraction_cmp_two_way(-1, 3, -1, 2));
+	REQUIRE(fraction_cmp_two_way(1, -3, 0, -2));
+	REQUIRE(!fraction_cmp_two_way(-19, 17, -38, 34));
+	REQUIRE(!fraction_cmp_two_way(-38, 34, -19, 17));
+	REQUIRE(!fraction_cmp_two_way(0, 1, 0, 1783));
+	REQUIRE(!fraction_cmp_two_way(0, 1783, 0, 1));
+	REQUIRE(!fraction_cmp_two_way(-9'999'999'997LL, 9'999'999'998LL,
+	                              -9'999'999'998LL, 9'999'999'999LL));
+	REQUIRE(fraction_cmp_two_way(-9'999'999'998LL, 9'999'999'999LL,
+	                             -9'999'999'997LL, 9'999'999'998LL));
+}
+
 TEST_CASE("prime sieve works as expected", "[math]") {
 	constexpr prime_sieve<100> ps;
 	static_assert(ps[53] ==

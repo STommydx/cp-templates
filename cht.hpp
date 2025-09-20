@@ -15,7 +15,7 @@
 #include <utility>
 #include <vector>
 
-template <class T> class cht {
+template <class T, class Order = std::ranges::less> class cht {
   public:
 	using line = std::pair<T, T>;
 	static constexpr size_t auto_assign = std::numeric_limits<size_t>::max();
@@ -24,25 +24,29 @@ template <class T> class cht {
 	size_t n;
 	std::vector<line> hull;
 	std::vector<size_t> hull_line_idx;
+	Order order;
 
 	/**
 	 * Check intersection of l1 and l2, l1 and l3. If the intersection of l1 and
 	 * l3 has x coordinate not smaller than the intersection of l1 and l2, then
 	 * line l2 should be skipped in the hull.
 	 */
-	static bool should_skip(const line &l1, const line &l2, const line &l3) {
-		return fraction_cmp(l3.second - l1.second, l1.first - l3.first,
-		                    l2.second - l1.second, l1.first - l2.first) >= 0;
+	bool should_skip(const line &l1, const line &l2, const line &l3) {
+		return !fraction_cmp_two_way(l3.second - l1.second, l1.first - l3.first,
+		                             l2.second - l1.second, l1.first - l2.first,
+		                             order);
 	}
 
   public:
 	cht() = default;
-	explicit cht(const std::vector<line> &lines) : n(lines.size()) {
+	explicit cht(const std::vector<line> &lines) : cht(lines, Order{}) {}
+	explicit cht(const std::vector<line> &lines, const Order &order)
+	    : n(0), order(order) {
 		std::vector<size_t> idx(lines.size());
 		std::iota(idx.begin(), idx.end(), 0);
 		auto indexer = [&](size_t idx) { return lines[idx].first; };
-		if (!std::ranges::is_sorted(idx, std::ranges::less{}, indexer)) {
-			std::ranges::sort(idx, std::ranges::less{}, indexer);
+		if (!std::ranges::is_sorted(idx, order, indexer)) {
+			std::ranges::sort(idx, order, indexer);
 		}
 		for (size_t i : idx) {
 			add_line(lines[i], i);
@@ -68,9 +72,9 @@ template <class T> class cht {
 			    // check intersection of lines hull[mi] and hull[mi + 1]
 			    // return whether x is not smaller than the x coordinate of
 			    // the intersection
-			    return fraction_cmp(x, T{1},
-			                        hull[mi].second - hull[mi + 1].second,
-			                        hull[mi + 1].first - hull[mi].first) >= 0;
+			    return !fraction_cmp_two_way(
+			        x, T{1}, hull[mi].second - hull[mi + 1].second,
+			        hull[mi + 1].first - hull[mi].first, order);
 		    });
 		return {hull[idx].first * x + hull[idx].second, hull_line_idx[idx]};
 	}

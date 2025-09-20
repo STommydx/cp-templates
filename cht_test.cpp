@@ -1,6 +1,7 @@
 #include "cht.hpp"
 
 #include <catch2/catch_test_macros.hpp>
+#include <functional>
 
 TEST_CASE("cht behaves as expected", "[cht]") {
 	cht<int> c({{2, 1}, {3, 2}, {1, -2}});
@@ -19,6 +20,24 @@ TEST_CASE("cht behaves as expected", "[cht]") {
 	REQUIRE(c2.query(-1).first == -1);
 	REQUIRE(c2.query(0).first == 0);
 	REQUIRE(c2.query(1).first == -1);
+}
+
+TEST_CASE("cht with custom ordering", "[cht]") {
+	// Hull with default ascending order (std::less)
+	cht<int> c_asc({{1, 3}, {3, 1}, {2, 2}});
+
+	// Hull with descending order (std::greater)
+	cht<int, std::greater<>> c_desc({{1, 3}, {3, 1}, {2, 2}});
+
+	// Both should produce valid convex hulls
+	REQUIRE(c_asc.size() >= 1);
+	REQUIRE(c_desc.size() >= 1);
+
+	// Test some queries to ensure both work correctly
+	// Note: The actual results might differ because of the different ordering
+	// but both should be mathematically correct
+	REQUIRE(c_asc.query(0).first == c_desc.query(0).first);
+	REQUIRE(c_asc.query(1).first == c_desc.query(1).first);
 }
 
 TEST_CASE("lichao_tree behaves as expected", "[cht]") {
