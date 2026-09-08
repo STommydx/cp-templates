@@ -96,7 +96,7 @@ go build -v ./...
 go test -v ./...
 ```
 
-The module declares Go 1.22. Keep generated or vendored dependency data out of
+The module declares Go 1.26. Keep generated or vendored dependency data out of
 source changes unless the dependency set is intentionally changed.
 
 For a local user workflow, the CLI supports:
