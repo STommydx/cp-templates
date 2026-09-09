@@ -13,6 +13,7 @@
 #include <bit>
 #include <functional>
 #include <optional>
+#include <stdexcept>
 #include <vector>
 
 #include "functional.hpp"
@@ -29,6 +30,9 @@ class segment_tree {
 	explicit segment_tree(const std::vector<T> &init, CombineOp combinator = {},
 	                      UpdateOp updater = {})
 	    : n(init.size()), tree(n), combinator(combinator), updater(updater) {
+		if (n == 0)
+			throw std::invalid_argument(
+			    "segment_tree requires a non-empty input");
 		std::copy(init.begin(), init.end(), back_inserter(tree));
 		for (size_t i = n - 1; i > 0; i--)
 			tree[i] = combinator(tree[i << 1], tree[i << 1 | 1]);
@@ -117,6 +121,9 @@ class lazy_segment_tree {
 	    : n(init.size()), h(std::bit_width(n)), tree(n), lazy(n + n),
 	      combinator(combinator), updater(updater),
 	      lazyCombinator(lazyCombinator), updaterLen(updaterLen) {
+		if (n == 0)
+			throw std::invalid_argument(
+			    "lazy_segment_tree requires a non-empty input");
 		copy(init.begin(), init.end(), back_inserter(tree));
 		for (int i = n - 1; i > 0; i--)
 			tree[i] = combinator(tree[i << 1], tree[i << 1 | 1]);

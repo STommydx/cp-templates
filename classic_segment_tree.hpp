@@ -7,6 +7,7 @@
 #define CLASSIC_SEGMENT_TREE_HPP
 
 #include <optional>
+#include <stdexcept>
 
 #include "functional.hpp"
 
@@ -101,6 +102,9 @@ class classic_segment_tree {
 	                              UpdateOp updater = {})
 	    : n(init.size()), tree(n + n), combinator(combinator),
 	      updater(updater) {
+		if (n == 0)
+			throw std::invalid_argument(
+			    "classic_segment_tree requires a non-empty input");
 		build(init, get_root_index(), 0, n - 1);
 	}
 	explicit classic_segment_tree(int n, const T &init = {},
@@ -248,6 +252,9 @@ class classic_lazy_segment_tree {
 	    : n(init.size()), tree(n + n), lazy(n + n), combinator(combinator),
 	      updater(updater), lazyCombinator(lazyCombinator),
 	      updaterLen(updaterLen) {
+		if (n == 0)
+			throw std::invalid_argument(
+			    "classic_lazy_segment_tree requires a non-empty input");
 		build(init, get_root_index(), 0, n - 1);
 	}
 	explicit classic_lazy_segment_tree(size_t n, const T &init = {},
@@ -385,6 +392,9 @@ class dynamic_segment_tree {
 	    : n(n), initializer(initializer), combinator(combinator),
 	      updater(updater), lazyCombinator(lazyCombinator),
 	      updaterLen(updaterLen) {
+		if (n <= 0)
+			throw std::invalid_argument(
+			    "dynamic_segment_tree requires a non-empty input");
 		root = create_node(0, n - 1);
 	}
 	explicit dynamic_segment_tree(SizeType n, const T &init = {},
