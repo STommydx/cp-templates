@@ -1,34 +1,60 @@
 /**
  * @file modint.hpp
- * @brief Class that warps integer for modular arithmetic operations
+ * @brief Class that wraps integer for modular arithmetic operations
  */
 
 #ifndef MODINT_HPP
 #define MODINT_HPP
 
+#include <concepts>
 #include <iostream>
+#include <limits>
+#include <type_traits>
 
-template <std::signed_integral T = int, T MOD = 1'000'000'007> class modint;
+template <class T>
+concept modint_integer = std::same_as<T, int> || std::same_as<T, long long>;
 
-template <std::signed_integral T, T MOD>
+template <modint_integer T = int, T MOD = 1'000'000'007> class modint;
+
+template <modint_integer T, T MOD>
 std::ostream &operator<<(std::ostream &, const modint<T, MOD> &);
-template <std::signed_integral T, T MOD>
+template <modint_integer T, T MOD>
 std::istream &operator>>(std::istream &, modint<T, MOD> &);
 
-template <std::signed_integral T, T MOD> class modint {
+template <modint_integer T, T MOD> class modint {
   private:
+	static_assert(MOD > 1);
+	static_assert(MOD <= std::numeric_limits<T>::max() / 2);
+	using mul_type =
+	    std::conditional_t<std::same_as<T, int> || MOD <= 3'037'000'500LL,
+	                       long long, __int128>;
 	T x;
+
+	static constexpr T normalize(T value) {
+		if (value >= MOD) {
+			value -= MOD;
+			if (value < MOD)
+				return value;
+		} else if (value >= 0) {
+			return value;
+		} else {
+			value += MOD;
+			if (value >= 0)
+				return value;
+		}
+		value %= MOD;
+		return value < 0 ? value + MOD : value;
+	}
 
   public:
 	friend std::ostream &operator<< <T, MOD>(std::ostream &, const modint &);
 	friend std::istream &operator>> <T, MOD>(std::istream &, modint &);
-	constexpr modint(const T &x) : x(x) {
-		if (this->x >= MOD)
-			this->x -= MOD;
-		if (this->x < 0)
-			this->x += MOD;
-	}
-	constexpr modint(const std::signed_integral auto &x) : modint(T(x % MOD)) {}
+
+	constexpr modint(T value) : x(normalize(value)) {}
+	template <std::signed_integral U>
+	constexpr modint(const U &value)
+	    : modint(static_cast<T>(value %
+	                            static_cast<std::common_type_t<U, T>>(MOD))) {}
 	constexpr modint() : x{} {}
 
 	constexpr modint &operator+=(const modint &rhs) {
@@ -65,7 +91,7 @@ template <std::signed_integral T, T MOD> class modint {
 	}
 
 	constexpr modint &operator*=(const modint &rhs) {
-		x = 1LL * x * rhs.x % MOD;
+		x = static_cast<T>(static_cast<mul_type>(x) * rhs.x % MOD);
 		return *this;
 	}
 	constexpr modint operator*(const modint &rhs) const {
@@ -85,6 +111,7 @@ template <std::signed_integral T, T MOD> class modint {
 		return *this = pow(p);
 	}
 
+	/** Requires prime MOD and a nonzero value. */
 	constexpr modint inv() const { return pow(MOD - 2); }
 	constexpr modint &operator/=(const modint &rhs) {
 		return *this *= rhs.inv();
@@ -100,17 +127,15 @@ template <std::signed_integral T, T MOD> class modint {
 	constexpr explicit operator bool() const { return bool(x); }
 };
 
-template <std::signed_integral T, T MOD>
+template <modint_integer T, T MOD>
 std::ostream &operator<<(std::ostream &os, const modint<T, MOD> &arg) {
 	return os << arg.x;
 }
-template <std::signed_integral T, T MOD>
+template <modint_integer T, T MOD>
 std::istream &operator>>(std::istream &is, modint<T, MOD> &arg) {
 	is >> arg.x;
-	if (arg.x >= MOD)
-		arg.x -= MOD;
-	if (arg.x < 0)
-		arg.x += MOD;
+	if (is)
+		arg.x = modint<T, MOD>::normalize(arg.x);
 	return is;
 }
 
@@ -119,7 +144,7 @@ using mint_1099 = modint<int, 1'000'000'009>;
 using mint_998 = modint<int, 998'244'353>;
 
 namespace std {
-template <class T, T MOD> struct hash<modint<T, MOD>> {
+template <modint_integer T, T MOD> struct hash<modint<T, MOD>> {
 	size_t operator()(const modint<T, MOD> &s) const noexcept {
 		return hash<T>{}(T(s));
 	}

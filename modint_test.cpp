@@ -2,6 +2,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <limits>
 #include <sstream>
 #include <vector>
 
@@ -51,9 +52,10 @@ TEST_CASE("typical 1e9 + 7 modding arithmetic", "[modint]") {
 TEST_CASE("modint for unusual modulos", "[modint]") {
 	SECTION("modulo with small prime") {
 		using m5 = modint<int, 5>;
-		m5 a = 2, b = 11LL; // only numbers from [-MOD, MOD + MOD) is supported
-		                    // for mod_int(T) constructor
+		m5 a = 2, b = 11LL, c = 16, d = -16;
 		REQUIRE(b == 1);
+		REQUIRE(c == 1);
+		REQUIRE(d == 4);
 		REQUIRE(a + a == b - 2);
 		REQUIRE(a * a == a + b * 2);
 		REQUIRE((a ^ 15) / (b ^ 4) == ((a / b) ^ 4) * (a ^ 11));
@@ -66,6 +68,24 @@ TEST_CASE("modint for unusual modulos", "[modint]") {
 		REQUIRE(a * a == a + b * 2);
 		REQUIRE((a ^ 15) / (b ^ 4) == ((a / b) ^ 4) * (a ^ 11));
 	}
+	SECTION("long long multiplication cutoff") {
+		using safe = modint<long long, 3'037'000'500LL>;
+		using wide = modint<long long, 3'037'000'501LL>;
+		safe safe_value = 3'037'000'499LL;
+		wide wide_value = 3'037'000'500LL;
+		REQUIRE(safe_value * safe_value == 1);
+		REQUIRE(wide_value * wide_value == 1);
+	}
+	SECTION("signed bounds") {
+		using mint = mint_1097;
+		const auto max_value = std::numeric_limits<int>::max();
+		const auto min_value = std::numeric_limits<int>::min();
+		REQUIRE(int(mint(max_value)) == max_value % 1'000'000'007);
+		REQUIRE(int(mint(min_value)) ==
+		        int((static_cast<long long>(min_value) % 1'000'000'007 +
+		             1'000'000'007) %
+		            1'000'000'007));
+	}
 }
 
 TEST_CASE("IO for modint", "[modint]") {
@@ -75,6 +95,18 @@ TEST_CASE("IO for modint", "[modint]") {
 		mint a;
 		ss >> a;
 		REQUIRE(a == -1);
+	}
+	SECTION("multi-wrap input") {
+		std::stringstream ss{"-2000000019"};
+		mint a;
+		ss >> a;
+		REQUIRE(a == -1);
+	}
+	SECTION("failed input sets failbit") {
+		std::stringstream ss{"999999999999999999999999"};
+		mint a = 7;
+		ss >> a;
+		REQUIRE(ss.fail());
 	}
 	SECTION("output operator overloading") {
 		std::stringstream ss;
