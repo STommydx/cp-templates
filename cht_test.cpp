@@ -4,6 +4,7 @@
 #include <functional>
 
 #include <algorithm>
+#include <stdexcept>
 #include <vector>
 
 TEST_CASE("cht behaves as expected", "[cht]") {
@@ -44,6 +45,26 @@ TEST_CASE("cht with custom ordering", "[cht]") {
 		            lines[descending_index].second ==
 		        expected);
 	}
+}
+
+TEST_CASE("cht handles duplicate slopes", "[cht]") {
+	std::vector<cht<int>::line> lines{{2, 7}, {2, 3}, {-1, 0}};
+	cht<int> ascending(lines);
+	cht<int, std::greater<>> descending(lines);
+	for (int x = -10; x <= 10; x++) {
+		int expected = std::min(2 * x + 3, -x);
+		REQUIRE(ascending.query(x).first == expected);
+		REQUIRE(descending.query(x).first == expected);
+	}
+	REQUIRE(ascending.query(-10).second == 1);
+	REQUIRE(descending.query(-10).second == 1);
+
+	cht<int> tied({{1, 5}, {1, 5}, {0, 100}});
+	REQUIRE(tied.query(0).second == 0);
+}
+
+TEST_CASE("cht rejects empty queries", "[cht]") {
+	REQUIRE_THROWS_AS(cht<int>{}.query(0), std::out_of_range);
 }
 
 TEST_CASE("lichao_tree behaves as expected", "[cht]") {

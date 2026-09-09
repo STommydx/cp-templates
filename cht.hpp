@@ -12,6 +12,7 @@
 #include <limits>
 #include <numeric>
 #include <ranges>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
@@ -45,15 +46,22 @@ template <class T, class Order = std::ranges::less> class cht {
 		std::vector<size_t> idx(lines.size());
 		std::iota(idx.begin(), idx.end(), 0);
 		auto indexer = [&](size_t idx) { return lines[idx].first; };
-		if (!std::ranges::is_sorted(idx, order, indexer)) {
-			std::ranges::sort(idx, order, indexer);
-		}
+		if (!std::ranges::is_sorted(idx, order, indexer))
+			std::ranges::stable_sort(idx, order, indexer);
 		for (size_t i : idx) {
 			add_line(lines[i], i);
 		}
 	}
 
 	void add_line(const line &l, size_t line_idx = auto_assign) {
+		if (!hull.empty() && l.first == hull.back().first) {
+			// Keep the existing line on ties.
+			if (l.second < hull.back().second) {
+				hull.back() = l;
+				hull_line_idx.back() = line_idx == auto_assign ? n++ : line_idx;
+			}
+			return;
+		}
 		while (hull.size() >= 2 &&
 		       should_skip(hull[hull.size() - 2], hull[hull.size() - 1], l)) {
 			hull.pop_back();
@@ -64,6 +72,8 @@ template <class T, class Order = std::ranges::less> class cht {
 	}
 
 	std::pair<T, size_t> query(T x) const {
+		if (hull.empty())
+			throw std::out_of_range("cht query on empty hull");
 		auto idx = *std::ranges::lower_bound(
 		    std::views::iota(size_t{0}, hull.size() + 1), true,
 		    std::ranges::less{}, [&](size_t mi) {
