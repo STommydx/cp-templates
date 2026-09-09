@@ -6,6 +6,7 @@
 #ifndef FLOW_HPP
 #define FLOW_HPP
 
+#include <stdexcept>
 #include <vector>
 
 #include "graph.hpp"
@@ -137,9 +138,10 @@ template <class T> class cost_flow_net {
 	std::pair<T, T> dinic_mcmf() {
 		T max_flow = 0, total_cost = 0;
 		std::vector<T> distance;
-		std::vector<int> visited(n), current_index(n);
+		std::vector<int> visited(n), current_index(n), edge_distance(n);
 		auto spfa = [&]() {
 			distance.assign(n, cp_limits<T>::infinity());
+			edge_distance.assign(n, 0);
 			std::vector<int> in_queue(n);
 			std::queue<int> q;
 			q.push(source);
@@ -158,6 +160,11 @@ template <class T> class cost_flow_net {
 					if (T new_dist = distance[u] + e.cost;
 					    new_dist < distance[v]) {
 						distance[v] = new_dist;
+						edge_distance[v] = edge_distance[u] + 1;
+						if (edge_distance[v] > n)
+							throw std::runtime_error(
+							    "cost flow graph has a reachable negative "
+							    "cycle");
 						if (!in_queue[v])
 							q.push(v), in_queue[v] = 1;
 					}
@@ -203,8 +210,10 @@ template <class T> class cost_flow_net {
 	}
 
 	std::pair<T, T> primal_dual_mcmf() {
+		std::vector<int> edge_distance(n);
 		auto spfa = [&]() {
 			std::vector<T> distance(n, cp_limits<T>::infinity());
+			edge_distance.assign(n, 0);
 			std::vector<int> in_queue(n);
 			std::queue<int> q;
 			q.push(source);
@@ -223,6 +232,11 @@ template <class T> class cost_flow_net {
 					if (T new_dist = distance[u] + e.cost;
 					    new_dist < distance[v]) {
 						distance[v] = new_dist;
+						edge_distance[v] = edge_distance[u] + 1;
+						if (edge_distance[v] > n)
+							throw std::runtime_error(
+							    "cost flow graph has a reachable negative "
+							    "cycle");
 						if (!in_queue[v])
 							q.push(v), in_queue[v] = 1;
 					}
