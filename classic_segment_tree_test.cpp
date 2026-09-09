@@ -413,3 +413,18 @@ TEST_CASE(
 	        [](long long lo, long long hi) { return 3 * (hi - lo + 1); });
 	REQUIRE(st2.query(1'000'000'000LL, 4'000'000'000LL) == 9'000'000'003LL);
 }
+
+TEST_CASE("classic segment trees reject empty input",
+          "[classic_segment_tree]") {
+	REQUIRE_THROWS_AS(classic_segment_tree<int>(std::vector<int>{}),
+	                  std::invalid_argument);
+	REQUIRE_THROWS_AS(classic_segment_tree<int>(0), std::invalid_argument);
+	REQUIRE_THROWS_AS(classic_lazy_segment_tree<int>(std::vector<int>{}),
+	                  std::invalid_argument);
+	REQUIRE_THROWS_AS(classic_lazy_segment_tree<int>(size_t{0}),
+	                  std::invalid_argument);
+	REQUIRE_THROWS_AS(dynamic_segment_tree<int>(std::vector<int>{}),
+	                  std::invalid_argument);
+	REQUIRE_THROWS_AS(dynamic_segment_tree<int>(size_t{0}),
+	                  std::invalid_argument);
+}

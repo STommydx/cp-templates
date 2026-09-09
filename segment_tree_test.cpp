@@ -207,3 +207,12 @@ TEST_CASE("lazy_segment_tree: range mxss query, range assignment update",
 	REQUIRE(st.query(0, 2).l_ans == -2);
 	REQUIRE(st.query(1, 2).r_ans == 0);
 }
+
+TEST_CASE("segment trees reject empty input", "[segment_tree]") {
+	REQUIRE_THROWS_AS(segment_tree<int>(std::vector<int>{}),
+	                  std::invalid_argument);
+	REQUIRE_THROWS_AS(segment_tree<int>(0), std::invalid_argument);
+	REQUIRE_THROWS_AS(lazy_segment_tree<int>(std::vector<int>{}),
+	                  std::invalid_argument);
+	REQUIRE_THROWS_AS(lazy_segment_tree<int>(size_t{0}), std::invalid_argument);
+}
