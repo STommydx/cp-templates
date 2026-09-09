@@ -567,7 +567,7 @@ template <class T> class suffix_array : public std::vector<int> {
 			return std::ranges::lexicographical_compare(r1, r2);               \
 		};                                                                     \
 		return std::ranges::NAME(*this, t, cmp, [this, &t](int i) {            \
-			return s.subspan(i, std::ranges::size(t));                         \
+			return s.subspan(i, std::min(s.size() - i, std::ranges::size(t))); \
 		});                                                                    \
 	}                                                                          \
 	template <class R> auto NAME(R &&t) {                                      \
@@ -575,7 +575,7 @@ template <class T> class suffix_array : public std::vector<int> {
 			return std::ranges::lexicographical_compare(r1, r2);               \
 		};                                                                     \
 		return std::ranges::NAME(*this, t, cmp, [this, &t](int i) {            \
-			return s.subspan(i, std::ranges::size(t));                         \
+			return s.subspan(i, std::min(s.size() - i, std::ranges::size(t))); \
 		});                                                                    \
 	}
 
