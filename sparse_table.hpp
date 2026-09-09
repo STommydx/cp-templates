@@ -18,6 +18,8 @@ template <class T, class Op = std::bit_or<>> class sparse_table {
 	sparse_table(const std::vector<T> &init, const Op &comb = {})
 	    : n(init.size()), m(std::bit_width(n)), dp(m, std::vector<T>(n)),
 	      op(comb) {
+		if (n == 0)
+			return;
 		dp[0] = init;
 		for (size_t j = 1; j < m; j++) {
 			for (size_t i = 0; i + (1 << j) <= n; i++) {
