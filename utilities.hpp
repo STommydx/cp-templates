@@ -168,6 +168,7 @@ template <class T> struct magic_vector {
 		}
 		std::copy(other.ptr->begin(), other.ptr->end(),
 		          std::back_inserter(*ptr));
+		return std::move(*this);
 	}
 	std::vector<T> &operator*() { return *this; }
 
