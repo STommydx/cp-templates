@@ -11,6 +11,7 @@
 #include <queue>
 #include <ranges>
 #include <span>
+#include <stdexcept>
 #include <vector>
 
 #include "functional.hpp"
@@ -53,7 +54,9 @@ std::vector<int> z_function(R &&s) {
 }
 
 std::vector<int> kmp(const std::string &str, const std::string &pattern) {
-	std::vector<int> pi = prefix_function(pattern + "#" + str);
+	if (pattern.empty())
+		throw std::invalid_argument("kmp pattern must be non-empty");
+	std::vector<int> pi = prefix_function(pattern + '\x1f' + str);
 	std::vector<int> result;
 	auto m = std::ranges::ssize(pattern);
 	for (int i = m + 1; i < std::ranges::ssize(pi); i++) {

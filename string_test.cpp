@@ -3,6 +3,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
+#include <stdexcept>
 #include <string>
 
 TEST_CASE("prefix function behaves as expected", "[string]") {
@@ -26,6 +27,10 @@ TEST_CASE("kmp behaves as expected", "[string]") {
 	std::string s = "ababa";
 	std::string p = "aba";
 	REQUIRE(kmp(s, p) == std::vector<int>{0, 2});
+	REQUIRE(kmp("#a#a", "#a") == std::vector<int>{0, 2});
+	REQUIRE(kmp("", "a").empty());
+	REQUIRE_THROWS_AS(kmp("abc", ""), std::invalid_argument);
+	REQUIRE_THROWS_AS(kmp("", ""), std::invalid_argument);
 }
 
 TEST_CASE("charset conversions behave as expected", "[string]") {
