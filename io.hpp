@@ -102,75 +102,82 @@ std::ostream &print_tuple(std::ostream &os, const T &t,
 	return os;
 }
 
-template <class T, int base = 1> struct _put_indices {
+namespace detail {
+template <class T, int base = 1> struct indexed_output {
 	const T &v;
 };
-template <class T, int base = 1> _put_indices<T, base> put_indices(const T &v) {
-	return _put_indices<T, base>{v};
+} // namespace detail
+
+template <class T, int base = 1>
+detail::indexed_output<T, base> put_indices(const T &v) {
+	return detail::indexed_output<T, base>{v};
 }
 
+namespace detail {
+
 template <class T, int base>
-std::ostream &operator<<(std::ostream &os, _put_indices<T, base> pi);
-template <class T, int base>
-std::ostream &operator<<(std::ostream &os,
-                         _put_indices<std::vector<T>, base> pi);
-template <class T, int base>
-std::ostream &operator<<(std::ostream &os,
-                         _put_indices<std::deque<T>, base> pi);
+std::ostream &operator<<(std::ostream &os, indexed_output<T, base> pi);
 template <class T, int base>
 std::ostream &operator<<(std::ostream &os,
-                         _put_indices<std::valarray<T>, base> pi);
+                         indexed_output<std::vector<T>, base> pi);
 template <class T, int base>
 std::ostream &operator<<(std::ostream &os,
-                         _put_indices<std::vector<std::vector<T>>, base> pi);
+                         indexed_output<std::deque<T>, base> pi);
+template <class T, int base>
+std::ostream &operator<<(std::ostream &os,
+                         indexed_output<std::valarray<T>, base> pi);
+template <class T, int base>
+std::ostream &operator<<(std::ostream &os,
+                         indexed_output<std::vector<std::vector<T>>, base> pi);
 template <class T, int base>
 std::ostream &
 operator<<(std::ostream &os,
-           _put_indices<std::valarray<std::valarray<T>>, base> pi);
+           indexed_output<std::valarray<std::valarray<T>>, base> pi);
 template <class T, int base>
 std::ostream &operator<<(std::ostream &os,
-                         _put_indices<std::vector<std::pair<T, T>>, base> pi);
+                         indexed_output<std::vector<std::pair<T, T>>, base> pi);
 template <class... Ts, int base>
-std::ostream &operator<<(std::ostream &os,
-                         _put_indices<std::vector<std::tuple<Ts...>>, base> pi);
+std::ostream &
+operator<<(std::ostream &os,
+           indexed_output<std::vector<std::tuple<Ts...>>, base> pi);
 template <class T1, class T2, int base>
 std::ostream &operator<<(std::ostream &os,
-                         _put_indices<std::pair<T1, T2>, base> pi);
+                         indexed_output<std::pair<T1, T2>, base> pi);
 template <class... Ts, int base>
 std::ostream &operator<<(std::ostream &os,
-                         _put_indices<std::tuple<Ts...>, base> pi);
+                         indexed_output<std::tuple<Ts...>, base> pi);
 template <class T, std::size_t... Is>
 std::ostream &print_index_tuple(std::ostream &os, const T &t,
                                 std::index_sequence<Is...>);
 
 template <class T, int base>
-std::ostream &operator<<(std::ostream &os, _put_indices<T, base> pi) {
+std::ostream &operator<<(std::ostream &os, indexed_output<T, base> pi) {
 	return os << pi.v + base;
 }
 template <class T, int base>
 std::ostream &operator<<(std::ostream &os,
-                         _put_indices<std::vector<T>, base> pi) {
+                         indexed_output<std::vector<T>, base> pi) {
 	return print_range(os, pi.v | std::views::transform([](const auto &x) {
 		                       return put_indices<T, base>(x);
 	                       }));
 }
 template <class T, int base>
 std::ostream &operator<<(std::ostream &os,
-                         _put_indices<std::valarray<T>, base> pi) {
+                         indexed_output<std::valarray<T>, base> pi) {
 	return print_range(os, pi.v | std::views::transform([](const auto &x) {
 		                       return put_indices<T, base>(x);
 	                       }));
 }
 template <class T, int base>
 std::ostream &operator<<(std::ostream &os,
-                         _put_indices<std::deque<T>, base> pi) {
+                         indexed_output<std::deque<T>, base> pi) {
 	return print_range(os, pi.v | std::views::transform([](const auto &x) {
 		                       return put_indices<T, base>(x);
 	                       }));
 }
 template <class T, int base>
 std::ostream &operator<<(std::ostream &os,
-                         _put_indices<std::vector<std::vector<T>>, base> pi) {
+                         indexed_output<std::vector<std::vector<T>>, base> pi) {
 	return print_range(os, pi.v | std::views::transform([](const auto &x) {
 		                       return put_indices<std::vector<T>, base>(x);
 	                       }),
@@ -179,15 +186,16 @@ std::ostream &operator<<(std::ostream &os,
 template <class T, int base>
 std::ostream &
 operator<<(std::ostream &os,
-           _put_indices<std::valarray<std::valarray<T>>, base> pi) {
+           indexed_output<std::valarray<std::valarray<T>>, base> pi) {
 	return print_range(os, pi.v | std::views::transform([](const auto &x) {
 		                       return put_indices<std::valarray<T>, base>(x);
 	                       }),
 	                   '\n');
 }
 template <class T, int base>
-std::ostream &operator<<(std::ostream &os,
-                         _put_indices<std::vector<std::pair<T, T>>, base> pi) {
+std::ostream &
+operator<<(std::ostream &os,
+           indexed_output<std::vector<std::pair<T, T>>, base> pi) {
 	return print_range(os, pi.v | std::views::transform([](const auto &x) {
 		                       return put_indices<std::pair<T, T>, base>(x);
 	                       }),
@@ -196,7 +204,7 @@ std::ostream &operator<<(std::ostream &os,
 template <class... Ts, int base>
 std::ostream &
 operator<<(std::ostream &os,
-           _put_indices<std::vector<std::tuple<Ts...>>, base> pi) {
+           indexed_output<std::vector<std::tuple<Ts...>>, base> pi) {
 	return print_range(os, pi.v | std::views::transform([](const auto &x) {
 		                       return put_indices<std::tuple<Ts...>, base>(x);
 	                       }),
@@ -204,13 +212,13 @@ operator<<(std::ostream &os,
 }
 template <class T1, class T2, int base>
 std::ostream &operator<<(std::ostream &os,
-                         _put_indices<std::pair<T1, T2>, base> pi) {
+                         indexed_output<std::pair<T1, T2>, base> pi) {
 	return os << put_indices<T1, base>(pi.v.first) << ' '
 	          << put_indices<T2, base>(pi.v.second);
 }
 template <class... Ts, int base>
 std::ostream &operator<<(std::ostream &os,
-                         _put_indices<std::tuple<Ts...>, base> pi) {
+                         indexed_output<std::tuple<Ts...>, base> pi) {
 	std::invoke(
 	    [&os, &pi]<std::size_t... Is>(std::index_sequence<Is...>) {
 		    (...,
@@ -221,6 +229,7 @@ std::ostream &operator<<(std::ostream &os,
 	    std::index_sequence_for<Ts...>{});
 	return os;
 }
+} // namespace detail
 
 template <class T>
 std::istream &operator>>(std::istream &is, std::vector<T> &r);
@@ -267,68 +276,74 @@ std::istream &read_tuple(std::istream &is, T &t, std::index_sequence<Is...>) {
 	return is;
 }
 
-template <class T, int base = 1> struct _get_indices {
+namespace detail {
+template <class T, int base = 1> struct indexed_input {
 	T &v;
 };
-template <class T, int base = 1> _get_indices<T, base> get_indices(T &v) {
-	return _get_indices<T, base>{v};
+} // namespace detail
+
+template <class T, int base = 1>
+detail::indexed_input<T, base> get_indices(T &v) {
+	return detail::indexed_input<T, base>{v};
 }
 
-template <class T, int base>
-std::istream &operator>>(std::istream &is, _get_indices<T, base> gi);
-template <class T, int base>
-std::istream &operator>>(std::istream &is,
-                         _get_indices<std::vector<T>, base> gi);
-template <class T, int base>
-std::istream &operator>>(std::istream &is,
-                         _get_indices<std::deque<T>, base> gi);
-template <class T, int base>
-std::istream &operator>>(std::istream &is,
-                         _get_indices<std::valarray<T>, base> gi);
-template <class T1, class T2, int base>
-std::istream &operator>>(std::istream &is,
-                         _get_indices<std::pair<T1, T2>, base> gi);
-template <class... Ts, int base>
-std::istream &operator>>(std::istream &is,
-                         _get_indices<std::tuple<Ts...>, base> gi);
+namespace detail {
 
 template <class T, int base>
-std::istream &operator>>(std::istream &is, _get_indices<T, base> gi) {
+std::istream &operator>>(std::istream &is, indexed_input<T, base> gi);
+template <class T, int base>
+std::istream &operator>>(std::istream &is,
+                         indexed_input<std::vector<T>, base> gi);
+template <class T, int base>
+std::istream &operator>>(std::istream &is,
+                         indexed_input<std::deque<T>, base> gi);
+template <class T, int base>
+std::istream &operator>>(std::istream &is,
+                         indexed_input<std::valarray<T>, base> gi);
+template <class T1, class T2, int base>
+std::istream &operator>>(std::istream &is,
+                         indexed_input<std::pair<T1, T2>, base> gi);
+template <class... Ts, int base>
+std::istream &operator>>(std::istream &is,
+                         indexed_input<std::tuple<Ts...>, base> gi);
+
+template <class T, int base>
+std::istream &operator>>(std::istream &is, indexed_input<T, base> gi) {
 	is >> gi.v;
 	gi.v -= base;
 	return is;
 }
 template <class T, int base>
 std::istream &operator>>(std::istream &is,
-                         _get_indices<std::vector<T>, base> gi) {
+                         indexed_input<std::vector<T>, base> gi) {
 	for (auto &x : gi.v)
 		is >> get_indices<T, base>(x);
 	return is;
 }
 template <class T, int base>
 std::istream &operator>>(std::istream &is,
-                         _get_indices<std::deque<T>, base> gi) {
+                         indexed_input<std::deque<T>, base> gi) {
 	for (auto &x : gi.v)
 		is >> get_indices<T, base>(x);
 	return is;
 }
 template <class T, int base>
 std::istream &operator>>(std::istream &is,
-                         _get_indices<std::valarray<T>, base> gi) {
+                         indexed_input<std::valarray<T>, base> gi) {
 	for (auto &x : gi.v)
 		is >> get_indices<T, base>(x);
 	return is;
 }
 template <class T1, class T2, int base>
 std::istream &operator>>(std::istream &is,
-                         _get_indices<std::pair<T1, T2>, base> gi) {
+                         indexed_input<std::pair<T1, T2>, base> gi) {
 	is >> get_indices<T1, base>(gi.v.first) >>
 	    get_indices<T2, base>(gi.v.second);
 	return is;
 }
 template <class... Ts, int base>
 std::istream &operator>>(std::istream &is,
-                         _get_indices<std::tuple<Ts...>, base> gi) {
+                         indexed_input<std::tuple<Ts...>, base> gi) {
 	std::invoke(
 	    [&is, &gi]<std::size_t... Is>(std::index_sequence<Is...>) {
 		    ((is >>
@@ -339,5 +354,6 @@ std::istream &operator>>(std::istream &is,
 	    std::index_sequence_for<Ts...>{});
 	return is;
 }
+} // namespace detail
 
 #endif

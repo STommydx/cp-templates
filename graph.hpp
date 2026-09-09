@@ -448,14 +448,15 @@ template <class T> class graph : public graph<void> {
 /**
  * c++ style I/O for graph similar to std::get_time, std::chrono::parse
  */
-template <class T, bool directed = true, int base = 1> struct _get_graph {
+namespace detail {
+template <class T, bool directed = true, int base = 1> struct graph_input {
 	graph<T> &g;
 	int m;
 };
 
 template <class T, bool directed, int base>
 std::istream &operator>>(std::istream &is,
-                         _get_graph<T, directed, base> get_g) {
+                         graph_input<T, directed, base> get_g) {
 	for (int i = 0; i < get_g.m; i++) {
 		typename graph<T>::edge e;
 		is >> get_indices<std::pair<int, int>, base>(e.first) >> e.second;
@@ -469,7 +470,7 @@ std::istream &operator>>(std::istream &is,
 
 template <bool directed, int base>
 std::istream &operator>>(std::istream &is,
-                         _get_graph<void, directed, base> get_g) {
+                         graph_input<void, directed, base> get_g) {
 	for (int i = 0; i < get_g.m; i++) {
 		graph<void>::edge e;
 		is >> get_indices<graph<void>::edge, base>(e);
@@ -480,36 +481,39 @@ std::istream &operator>>(std::istream &is,
 	}
 	return is;
 }
+} // namespace detail
 
 template <class T, bool directed = true, int base = 1>
-_get_graph<T, directed, base> get_graph(graph<T> &g, int m) {
-	return _get_graph<T, directed, base>{g, m};
+detail::graph_input<T, directed, base> get_graph(graph<T> &g, int m) {
+	return detail::graph_input<T, directed, base>{g, m};
 }
 
 template <class T, int base = 1>
-_get_graph<T, true, base> get_directed_graph(graph<T> &g, int m) {
-	return _get_graph<T, true, base>{g, m};
+detail::graph_input<T, true, base> get_directed_graph(graph<T> &g, int m) {
+	return detail::graph_input<T, true, base>{g, m};
 }
 
 template <class T, int base = 1>
-_get_graph<T, false, base> get_undirected_graph(graph<T> &g, int m) {
-	return _get_graph<T, false, base>{g, m};
+detail::graph_input<T, false, base> get_undirected_graph(graph<T> &g, int m) {
+	return detail::graph_input<T, false, base>{g, m};
 }
 
 template <class T, bool directed = true, int base = 1>
-_get_graph<T, directed, base> get_tree(graph<T> &g) {
-	return _get_graph<T, directed, base>{g,
-	                                     static_cast<int>(std::ssize(g) - 1)};
+detail::graph_input<T, directed, base> get_tree(graph<T> &g) {
+	return detail::graph_input<T, directed, base>{
+	    g, static_cast<int>(std::ssize(g) - 1)};
 }
 
 template <class T, int base = 1>
-_get_graph<T, true, base> get_directed_tree(graph<T> &g) {
-	return _get_graph<T, true, base>{g, static_cast<int>(std::ssize(g) - 1)};
+detail::graph_input<T, true, base> get_directed_tree(graph<T> &g) {
+	return detail::graph_input<T, true, base>{
+	    g, static_cast<int>(std::ssize(g) - 1)};
 }
 
 template <class T, int base = 1>
-_get_graph<T, false, base> get_undirected_tree(graph<T> &g) {
-	return _get_graph<T, false, base>{g, static_cast<int>(std::ssize(g) - 1)};
+detail::graph_input<T, false, base> get_undirected_tree(graph<T> &g) {
+	return detail::graph_input<T, false, base>{
+	    g, static_cast<int>(std::ssize(g) - 1)};
 }
 
 #endif
