@@ -152,6 +152,34 @@ TEST_CASE("matrix construction and member functions", "[matrix]") {
 	}
 }
 
+TEST_CASE("matrix supports signed diagonal offsets", "[matrix]") {
+	matrix<int> upper(2, 4);
+	upper.diagonal(3) = 7;
+	REQUIRE(upper(0, 3) == 7);
+	upper.diagonal(-1) = 8;
+	REQUIRE(upper(1, 0) == 8);
+	upper = matrix<int>::eye(2, 4, -1);
+	const matrix<int> &const_upper = upper;
+	REQUIRE(const_upper.diagonal(-1)[0] == 1);
+
+	matrix<int> lower(4, 2);
+	lower.diagonal(-3) = 9;
+	REQUIRE(lower(3, 0) == 9);
+	lower.diagonal(1) = 6;
+	REQUIRE(lower(0, 1) == 6);
+}
+
+TEST_CASE("matrix rejects invalid diagonal offsets", "[matrix]") {
+	matrix<int> a(2, 4);
+	const matrix<int> &ca = a;
+	REQUIRE_THROWS_AS(a.diagonal(4) = 1, std::out_of_range);
+	REQUIRE_THROWS_AS(ca.diagonal(4), std::out_of_range);
+	REQUIRE_THROWS_AS(a.diagonal(-2) = 1, std::out_of_range);
+	matrix<int> b(4, 2);
+	REQUIRE_THROWS_AS(b.diagonal(2) = 1, std::out_of_range);
+	REQUIRE_THROWS_AS(b.diagonal(-4) = 1, std::out_of_range);
+}
+
 TEST_CASE("matrix arithmetic operator overload", "[matrix]") {
 	matrix<int> a(2, 2, 5);
 	matrix<int> b(2, 2, 7);

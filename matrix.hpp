@@ -8,8 +8,10 @@
 
 #include <algorithm>
 #include <concepts>
+#include <cstddef>
 #include <functional>
 #include <optional>
+#include <stdexcept>
 #include <utility>
 #include <valarray>
 #include <vector>
@@ -65,6 +67,19 @@ matrix<T> matrix_power(const matrix<T> &a, I p);
 template <class T> class matrix {
 	size_t n, m;
 	std::valarray<T> dat;
+	std::slice diagonal_slice(std::ptrdiff_t offset) const {
+		size_t row = 0, col = 0;
+		if (offset < 0) {
+			row = static_cast<size_t>(-(offset + 1)) + 1;
+			if (row >= n)
+				throw std::out_of_range("matrix diagonal offset");
+		} else {
+			col = static_cast<size_t>(offset);
+			if (col >= m)
+				throw std::out_of_range("matrix diagonal offset");
+		}
+		return std::slice(row * m + col, std::min(n - row, m - col), m + 1);
+	}
 
   public:
 	static constexpr size_t none_axis = -1;
@@ -109,7 +124,7 @@ template <class T> class matrix {
 		return matrix(count_n, count_m, 1);
 	}
 	static matrix eye(size_t count_n, size_t count_m = none_axis,
-	                  size_t k = 0) {
+	                  std::ptrdiff_t k = 0) {
 		if (count_m == none_axis) {
 			count_m = count_n;
 		}
@@ -130,11 +145,11 @@ template <class T> class matrix {
 	std::slice_array<T> row(size_t i) { return dat[std::slice(i * m, m, 1)]; }
 	std::valarray<T> col(size_t j) const { return dat[std::slice(j, n, m)]; }
 	std::slice_array<T> col(size_t j) { return dat[std::slice(j, n, m)]; }
-	std::valarray<T> diagonal(size_t offset) const {
-		return dat[std::slice(offset, std::min(n, m - offset), m + 1)];
+	std::valarray<T> diagonal(std::ptrdiff_t offset) const {
+		return dat[diagonal_slice(offset)];
 	}
-	std::slice_array<T> diagonal(size_t offset) {
-		return dat[std::slice(offset, std::min(n, m - offset), m + 1)];
+	std::slice_array<T> diagonal(std::ptrdiff_t offset) {
+		return dat[diagonal_slice(offset)];
 	}
 	matrix transpose() const {
 		matrix res(m, n);
