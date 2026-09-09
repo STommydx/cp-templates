@@ -152,6 +152,42 @@ TEST_CASE("matrix construction and member functions", "[matrix]") {
 	}
 }
 
+TEST_CASE("matrix validates non-accessor shape preconditions", "[matrix]") {
+	SECTION("storage sizes and rectangular input") {
+		std::valarray<int> values{1, 2, 3};
+		REQUIRE_THROWS_AS(matrix<int>(2, 2, values), std::invalid_argument);
+		matrix<int> a(2, 2);
+		REQUIRE_THROWS_AS(a = values, std::invalid_argument);
+
+		std::vector<std::vector<int>> ragged{{1, 2}, {3}};
+		REQUIRE_THROWS_AS(matrix<int>(ragged), std::invalid_argument);
+	}
+
+	SECTION("operation dimensions") {
+		matrix<int> a(2, 2), rows(3, 2), columns(2, 3);
+		REQUIRE_THROWS_AS(a.concatenate<0>(columns), std::invalid_argument);
+		REQUIRE_THROWS_AS(a.concatenate<1>(rows), std::invalid_argument);
+
+		REQUIRE_THROWS_AS(matmul(a, rows), std::invalid_argument);
+		REQUIRE_THROWS_AS(a + rows, std::invalid_argument);
+		REQUIRE_THROWS_AS(a += rows, std::invalid_argument);
+		REQUIRE_THROWS_AS(a == rows, std::invalid_argument);
+	}
+
+	SECTION("submatrix bounds") {
+		matrix<int> a(2, 2);
+		REQUIRE_THROWS_AS(a.submatrix(1, 1, 2, 1), std::out_of_range);
+		REQUIRE_THROWS_AS(a.submatrix(0, 2, 1, 1), std::out_of_range);
+	}
+
+	SECTION("matrix algorithm domains") {
+		matrix<int> square(2, 2), nonsquare(2, 3);
+		REQUIRE_THROWS_AS(matrix_power(nonsquare, 2), std::invalid_argument);
+		REQUIRE_THROWS_AS(matrix_power(square, -1), std::invalid_argument);
+		REQUIRE_THROWS_AS(matrix_inverse(nonsquare), std::invalid_argument);
+	}
+}
+
 TEST_CASE("matrix supports signed diagonal offsets", "[matrix]") {
 	matrix<int> upper(2, 4);
 	upper.diagonal(3) = 7;
@@ -262,6 +298,10 @@ TEST_CASE("gaussian elimination", "[matrix]") {
 		REQUIRE(res(1, 0) == 0);
 		REQUIRE(res(1, 1) == 1);
 		REQUIRE(res(1, 2) == 3);
+	}
+	SECTION("rejects fewer columns than rows") {
+		matrix<int> mat(std::vector<std::vector<int>>{{1}, {2}});
+		REQUIRE_THROWS_AS(gaussian_elimination(mat), std::invalid_argument);
 	}
 }
 

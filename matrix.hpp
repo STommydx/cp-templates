@@ -67,6 +67,17 @@ matrix<T> matrix_power(const matrix<T> &a, I p);
 template <class T> class matrix {
 	size_t n, m;
 	std::valarray<T> dat;
+	static void check_storage_size(size_t count_n, size_t count_m,
+	                               size_t storage_size) {
+		if (storage_size != count_n * count_m)
+			throw std::invalid_argument(
+			    "matrix storage size does not match shape");
+	}
+	void check_same_shape(const matrix &other) const {
+		if (n != other.n || m != other.m)
+			throw std::invalid_argument("matrix shapes do not match");
+	}
+
 	std::slice diagonal_slice(std::ptrdiff_t offset) const {
 		size_t row = 0, col = 0;
 		if (offset < 0) {
@@ -91,21 +102,31 @@ template <class T> class matrix {
 	    : n(count_n), m(count_m), dat(val, count_n * count_m) {}
 	explicit matrix(size_t count_n, size_t count_m,
 	                const std::valarray<T> &vals)
-	    : n(count_n), m(count_m), dat(vals) {}
+	    : n(count_n), m(count_m), dat(vals) {
+		check_storage_size(n, m, dat.size());
+	}
 	explicit matrix(size_t count_n, size_t count_m, std::valarray<T> &&vals)
-	    : n(count_n), m(count_m), dat(std::move(vals)) {}
+	    : n(count_n), m(count_m), dat(std::move(vals)) {
+		check_storage_size(n, m, dat.size());
+	}
 	matrix(const std::vector<std::vector<T>> &v)
 	    : n(v.size()), m(v.empty() ? 0 : v[0].size()), dat(n * m) {
-		for (size_t i = 0; i < n; ++i) {
-			std::ranges::copy(v[i], begin(dat) + i * m);
+		for (const auto &row : v) {
+			if (row.size() != m)
+				throw std::invalid_argument(
+				    "matrix rows do not have equal sizes");
 		}
+		for (size_t i = 0; i < n; ++i)
+			std::ranges::copy(v[i], begin(dat) + i * m);
 	}
 
 	matrix &operator=(const std::valarray<T> &other) {
+		check_storage_size(n, m, other.size());
 		dat = other;
 		return *this;
 	}
-	matrix &operator=(const std::valarray<T> &&other) {
+	matrix &operator=(std::valarray<T> &&other) {
+		check_storage_size(n, m, other.size());
 		dat = std::move(other);
 		return *this;
 	}
@@ -158,18 +179,26 @@ template <class T> class matrix {
 		return res;
 	}
 	matrix submatrix(size_t i, size_t j, size_t size_i, size_t size_j) const {
+		if (i > n || size_i > n - i || j > m || size_j > m - j)
+			throw std::out_of_range("matrix submatrix bounds");
 		matrix res(size_i, size_j);
 		for (size_t u = 0; u < size_i; ++u)
 			res.row(u) = dat[std::slice((u + i) * m + j, size_j, 1)];
 		return res;
 	}
 	template <size_t Axis> matrix concatenate(const matrix &other) const {
+		static_assert(Axis == 0 || Axis == 1);
 		if constexpr (Axis == 0) {
+			if (m != other.m)
+				throw std::invalid_argument(
+				    "matrix column counts do not match");
 			matrix res(n + other.n, m);
 			res.dat[std::slice(0, n * m, 1)] = dat;
 			res.dat[std::slice(n * m, other.n * m, 1)] = other.dat;
 			return res;
-		} else if constexpr (Axis == 1) {
+		} else {
+			if (n != other.n)
+				throw std::invalid_argument("matrix row counts do not match");
 			matrix res(n, m + other.m);
 			for (size_t i = 0; i < n; ++i) {
 				res.dat[std::slice(i * (m + other.m), m, 1)] = row(i);
@@ -270,6 +299,7 @@ template <class T> class matrix {
 
 #define MEMBER_BINARY_OP(OP)                                                   \
 	matrix &operator OP(const matrix & m) {                                    \
+		check_same_shape(m);                                                   \
 		dat OP m.dat;                                                          \
 		return *this;                                                          \
 	}                                                                          \
@@ -343,6 +373,7 @@ template <class T> class matrix {
 #define NON_MEMBER_BINARY_OP(OP)                                               \
 	template <class T>                                                         \
 	matrix<T> operator OP(const matrix<T> &a, const matrix<T> &b) {            \
+		a.check_same_shape(b);                                                 \
 		return matrix<T>(a.n, a.m, a.dat OP b.dat);                            \
 	}                                                                          \
 	template <class T>                                                         \
@@ -369,6 +400,7 @@ NON_MEMBER_BINARY_OP(>>)
 #define NON_MEMBER_BINARY_PREDICATE(OP)                                        \
 	template <class T>                                                         \
 	matrix<bool> operator OP(const matrix<T> &a, const matrix<T> &b) {         \
+		a.check_same_shape(b);                                                 \
 		return matrix<bool>(a.n, a.m, a.dat OP b.dat);                         \
 	}                                                                          \
 	template <class T>                                                         \
@@ -405,6 +437,9 @@ template <class T> std::istream &operator>>(std::istream &is, matrix<T> &m) {
 }
 
 template <class T> matrix<T> matmul(const matrix<T> &a, const matrix<T> &b) {
+	if (a.m != b.n)
+		throw std::invalid_argument(
+		    "matrix multiplication dimensions do not match");
 	matrix<T> result(a.n, b.m);
 	for (size_t i = 0; i < a.n; ++i) {
 		for (size_t j = 0; j < b.m; ++j) {
@@ -417,6 +452,13 @@ template <class T> matrix<T> matmul(const matrix<T> &a, const matrix<T> &b) {
 template <class T, std::integral I>
 matrix<T> matrix_power(const matrix<T> &a, I p) {
 	auto [n, m] = a.shape();
+	if (n != m)
+		throw std::invalid_argument("matrix power requires a square matrix");
+	if constexpr (std::signed_integral<I>) {
+		if (p < 0)
+			throw std::invalid_argument(
+			    "matrix power requires a nonnegative exponent");
+	}
 	matrix<T> result = matrix<T>::identity(n);
 	matrix<T> b(a);
 	while (p > 0) {
@@ -428,9 +470,14 @@ matrix<T> matrix_power(const matrix<T> &a, I p) {
 	return result;
 }
 
+// Floating-point and modint; requires columns >= rows.
+
 template <class T>
 std::pair<matrix<T>, T> gaussian_elimination(const matrix<T> &a) {
 	auto [n, m] = a.shape();
+	if (m < n)
+		throw std::invalid_argument(
+		    "gaussian elimination requires at least as many columns as rows");
 	matrix<T> b(a);
 	T det = 1;
 	for (size_t i = 0; i < n; ++i) {
@@ -476,7 +523,9 @@ std::pair<matrix<T>, T> gaussian_elimination(const matrix<T> &a) {
 }
 
 template <class T> std::optional<matrix<T>> matrix_inverse(const matrix<T> &a) {
-	size_t n = a.shape().first;
+	auto [n, m] = a.shape();
+	if (n != m)
+		throw std::invalid_argument("matrix inverse requires a square matrix");
 	auto [res, det] = gaussian_elimination<T>(
 	    a.template concatenate<1>(matrix<T>::identity(n)));
 	if (det == 0)
