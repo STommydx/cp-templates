@@ -131,6 +131,19 @@ TEST_CASE("suffix array construction", "[string]") {
 	        std::vector<int>{5, 8, 4, 7, 3, 6, 2, 1, 0});
 }
 
+TEST_CASE("empty suffix array", "[string]") {
+	std::string s;
+	auto [sa, rank] = build_suffix_array(s);
+	REQUIRE(sa.empty());
+	REQUIRE(rank.empty());
+	REQUIRE(build_lcp(s).empty());
+	suffix_array suffixes(s);
+	REQUIRE(suffixes.empty());
+	REQUIRE(suffixes.count_unique_substrings() == 0);
+	REQUIRE(suffixes.count("a") == 0);
+	suffixes.longest_common_prefix();
+}
+
 TEST_CASE("lcp construction", "[string]") {
 	using namespace std::literals;
 	REQUIRE(build_lcp("ababba"s) == std::vector<int>{0, 1, 2, 0, 2, 1});

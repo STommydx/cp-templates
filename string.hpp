@@ -382,6 +382,8 @@ template <std::ranges::random_access_range R>
     requires std::ranges::sized_range<R>
 std::pair<std::vector<int>, std::vector<int>> build_suffix_array(R &&s) {
 	int n = std::ranges::size(s);
+	if (n == 0)
+		return {std::vector<int>{}, std::vector<int>{}};
 	int m = *std::ranges::max_element(s) + 1;
 
 	// helper functions

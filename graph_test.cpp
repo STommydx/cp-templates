@@ -54,6 +54,28 @@ TEST_CASE("unweighted graph functionality test", "[graph]") {
 	}
 }
 
+TEST_CASE("graph resize keeps vertex metadata", "[graph]") {
+	SECTION("unweighted graph") {
+		graph<> g(2);
+		g.push_edge(0, 1);
+		g.resize(3);
+		REQUIRE(g.size() == 3);
+		REQUIRE(g.get_out_degree() == std::vector<int>{1, 0, 0});
+		REQUIRE(g.get_in_degree() == std::vector<int>{0, 1, 0});
+		g.push_edge(2, 0);
+		REQUIRE(g.adjacency_matrix() == std::vector<std::vector<bool>>{
+		                                    {0, 1, 0}, {0, 0, 0}, {1, 0, 0}});
+	}
+	SECTION("weighted graph") {
+		graph<int> g(2);
+		g.push_edge(0, 1, 7);
+		g.resize(3);
+		g.push_edge(2, 0, 5);
+		REQUIRE(g.adjacency_matrix() ==
+		        std::vector<std::vector<int>>{{0, 7, 0}, {0, 0, 0}, {5, 0, 0}});
+	}
+}
+
 TEST_CASE("weighted graph functionality test", "[graph]") {
 	graph<int> g(4);
 	g.push_edge(0, 1, 4);

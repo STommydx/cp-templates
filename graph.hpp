@@ -40,6 +40,13 @@ template <> class graph<void> : public std::vector<std::vector<int>> {
 				push_edge(parents[i], i);
 		}
 	}
+	void resize(size_t count) {
+		std::vector<std::vector<int>>::resize(count);
+		n = count;
+		m = 0;
+		for (const auto &adj : *this)
+			m += adj.size();
+	}
 
 	void push_edge(const edge &e) {
 		(*this)[e.first].push_back(e.second);
