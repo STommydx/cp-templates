@@ -91,3 +91,14 @@ TEST_CASE("vector with rollback", "[utilities]") {
 	REQUIRE(v2[3] == 10);
 	REQUIRE(v2[4] == 8);
 }
+
+TEST_CASE("magic vector merge returns the merged vector", "[utilities]") {
+	magic_vector<int> left;
+	left.push_back(1);
+	magic_vector<int> right;
+	right.push_back(2);
+	auto merged = std::move(left) + std::move(right);
+	REQUIRE(merged.size() == 2);
+	REQUIRE(merged[0] == 1);
+	REQUIRE(merged[1] == 2);
+}
