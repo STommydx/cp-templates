@@ -11,8 +11,10 @@
 #include <concepts>
 
 template <std::unsigned_integral T> constexpr T isqrt(T x) {
+	if (x == 0)
+		return 0;
 	T guess = 0;
-	for (int j = std::bit_width(x) / 2; j >= 0; j--) {
+	for (int j = (std::bit_width(x) - 1) / 2; j >= 0; j--) {
 		if (T new_guess = guess + (T(1) << j); new_guess * new_guess <= x) {
 			guess = new_guess;
 		}
