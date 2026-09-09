@@ -203,8 +203,12 @@ class lichao_tree {
 	}
 
   public:
+	// Domain is [bound_lo, bound_hi); modify ranges are inclusive.
 	lichao_tree(T bound_lo, T bound_hi)
 	    : n(0), bound_lo(bound_lo), bound_hi(bound_hi) {
+		if (bound_lo >= bound_hi)
+			throw std::invalid_argument(
+			    "Li Chao tree domain must be non-empty");
 		root = create_node(bound_lo, bound_hi);
 	}
 	explicit lichao_tree(T bound_hi) : lichao_tree(0, bound_hi) {}
@@ -214,12 +218,19 @@ class lichao_tree {
 	}
 
 	void modify(T l, T r, const Line &line, size_t line_idx = auto_assign) {
+		if (l > r || l < bound_lo || r >= bound_hi)
+			throw std::out_of_range("Li Chao modification range");
 		modify(l, r + 1, line, line_idx == auto_assign ? n++ : line_idx, root,
 		       bound_lo, bound_hi);
 	}
 
 	std::pair<result_type, size_t> query(T x) const {
-		return *query(x, root, bound_lo, bound_hi);
+		if (x < bound_lo || x >= bound_hi)
+			throw std::out_of_range("Li Chao query outside domain");
+		auto result = query(x, root, bound_lo, bound_hi);
+		if (!result)
+			throw std::out_of_range("Li Chao tree has no lines");
+		return *result;
 	}
 };
 

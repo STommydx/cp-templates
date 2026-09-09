@@ -89,3 +89,21 @@ TEST_CASE("lichao_tree behaves as expected", "[cht]") {
 	REQUIRE(c2.query(0).first == 0);
 	REQUIRE(c2.query(1).first == -1);
 }
+
+TEST_CASE("lichao_tree validates its domain and ranges", "[cht]") {
+	REQUIRE_THROWS_AS(lichao_tree<int>(0, 0), std::invalid_argument);
+	REQUIRE_THROWS_AS(lichao_tree<int>(2, 1), std::invalid_argument);
+
+	lichao_tree<int> tree(0, 10);
+	REQUIRE_THROWS_AS(tree.query(0), std::out_of_range);
+	REQUIRE_THROWS_AS(tree.query(10), std::out_of_range);
+
+	const std::pair<int, int> line{1, 0};
+	REQUIRE_THROWS_AS(tree.modify(3, 2, line), std::out_of_range);
+	REQUIRE_THROWS_AS(tree.modify(-1, 2, line), std::out_of_range);
+	REQUIRE_THROWS_AS(tree.modify(0, 10, line), std::out_of_range);
+
+	tree.modify(2, 4, line);
+	REQUIRE(tree.query(2).first == 2);
+	REQUIRE(tree.query(4).first == 4);
+}
