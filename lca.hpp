@@ -14,22 +14,20 @@
 template <class T = void, class Op = std::plus<>, bool VertexQuery = true>
 class lca;
 
-template <class Op, bool VertexQuery> class lca<void, Op, VertexQuery> {
+class binary_lifting {
   protected:
+	using table = std::vector<std::vector<int>>;
 	size_t n, m;
-	std::vector<int> depth;
-	std::vector<std::vector<int>> dp;
-
-	explicit lca(const graph<void>::dfs_traversal_result &r)
-	    : lca(get<3>(r), get<2>(r)) {}
+	table dp;
 
   public:
 	static constexpr int no_parent = -1;
 
-	explicit lca(const std::vector<int> &parents,
-	             const std::vector<int> &depth = {})
-	    : n(parents.size()), m(std::bit_width(n)), depth(depth),
+	explicit binary_lifting(const std::vector<int> &parents)
+	    : n(parents.size()), m(std::bit_width(n)),
 	      dp(m, std::vector<int>(n, no_parent)) {
+		if (n == 0)
+			return;
 		dp[0] = parents;
 		for (size_t j = 1; j < m; j++) {
 			for (size_t i = 0; i < n; i++) {
@@ -39,8 +37,6 @@ template <class Op, bool VertexQuery> class lca<void, Op, VertexQuery> {
 			}
 		}
 	}
-	explicit lca(const graph<void> &g, int root = graph<void>::all_nodes)
-	    : lca(g.dfs_traversal(root)) {}
 
 	int kth_ancestor(int u, int k) const {
 		for (size_t j = 0; j < m && k > 0; j++, k >>= 1) {
@@ -52,6 +48,27 @@ template <class Op, bool VertexQuery> class lca<void, Op, VertexQuery> {
 		}
 		return k > 0 ? no_parent : u;
 	}
+};
+
+template <class Op, bool VertexQuery>
+class lca<void, Op, VertexQuery> : public binary_lifting {
+  protected:
+	std::vector<int> depth;
+
+	explicit lca(const graph<void>::dfs_traversal_result &r)
+	    : lca(get<3>(r), get<2>(r)) {}
+
+	using binary_lifting::dp;
+	using binary_lifting::m;
+	using binary_lifting::n;
+
+  public:
+	static constexpr int no_parent = binary_lifting::no_parent;
+
+	explicit lca(const std::vector<int> &parents, const std::vector<int> &depth)
+	    : binary_lifting(parents), depth(depth) {}
+	explicit lca(const graph<void> &g, int root = graph<void>::all_nodes)
+	    : lca(g.dfs_traversal(root)) {}
 
 	int operator()(int u, int v) const {
 		if (depth[u] > depth[v])
@@ -86,7 +103,7 @@ class lca : public lca<void, Op, VertexQuery> {
 	static constexpr int no_parent = -1;
 
 	explicit lca(const std::vector<T> &v, const std::vector<int> &parents,
-	             const std::vector<int> &depth = {}, Op op = {})
+	             const std::vector<int> &depth, Op op = {})
 	    : lca<void, Op, VertexQuery>(parents, depth), dat(m, std::vector<T>(n)),
 	      op(op) {
 		dat[0] = v;

@@ -97,3 +97,20 @@ TEST_CASE("lowest common ancestor", "[lca]") {
 		REQUIRE(l(5, 0).second == 0);
 	}
 }
+
+TEST_CASE("binary lifting from parent array", "[lca]") {
+	std::vector<int> parents{-1, 0, 0, 1, 1, 4, 4};
+	binary_lifting l(parents);
+	REQUIRE(l.kth_ancestor(5, 1) == 4);
+	REQUIRE(l.kth_ancestor(5, 2) == 1);
+	REQUIRE(l.kth_ancestor(5, 3) == 0);
+	REQUIRE(l.kth_ancestor(5, 4) == binary_lifting::no_parent);
+}
+
+TEST_CASE("LCA from parent array", "[lca]") {
+	std::vector<int> parents{-1, 0, 0, 1, 1, 4, 4};
+	std::vector<int> depth{0, 1, 1, 2, 2, 3, 3};
+	lca<> l(parents, depth);
+	REQUIRE(l(5, 6) == 4);
+	REQUIRE(l(3, 6) == 1);
+}
