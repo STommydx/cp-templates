@@ -2,6 +2,9 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <cstdint>
+#include <limits>
+
 TEST_CASE("isqrt behaves as expected", "[math]") {
 	REQUIRE(isqrt(0) == 0);
 	REQUIRE(isqrt(1) == 1);
@@ -17,6 +20,13 @@ TEST_CASE("isqrt behaves as expected", "[math]") {
 	REQUIRE(isqrt(16) == 4);
 	REQUIRE(isqrt(1'000'000'000'000LL) == 1'000'000);
 	REQUIRE(isqrt(1'000'000'000'000LL - 1) == 1'000'000 - 1);
+}
+
+TEST_CASE("isqrt handles unsigned limits", "[math]") {
+	REQUIRE(isqrt(std::uint32_t{0}) == 0);
+	REQUIRE(isqrt(std::numeric_limits<std::uint32_t>::max()) == 65'535);
+	REQUIRE(isqrt(std::numeric_limits<std::uint64_t>::max()) ==
+	        4'294'967'295ULL);
 }
 
 TEST_CASE("fraction_cmp behaves as expected", "[math]") {
