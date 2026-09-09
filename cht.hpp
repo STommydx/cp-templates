@@ -9,10 +9,14 @@
 #include "math.hpp"
 
 #include <algorithm>
+#include <cstddef>
+#include <functional>
 #include <limits>
 #include <numeric>
+#include <optional>
 #include <ranges>
 #include <stdexcept>
+#include <type_traits>
 #include <utility>
 #include <vector>
 

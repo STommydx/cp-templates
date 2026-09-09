@@ -7,10 +7,13 @@
 #define UTILITIES_HPP
 
 #include <algorithm>
+#include <cstddef>
 #include <functional>
+#include <iterator>
 #include <memory>
 #include <numeric>
 #include <ranges>
+#include <utility>
 #include <vector>
 
 /**
@@ -20,7 +23,7 @@
 template <class T> class prefix_sum : public std::vector<T> {
   public:
 	explicit prefix_sum(const std::vector<T> &v) : std::vector<T>(v) {
-		partial_sum(begin(v), end(v), begin(*this));
+		std::partial_sum(begin(v), end(v), begin(*this));
 	}
 	T query(size_t l, size_t r) const {
 		if (l == 0) {

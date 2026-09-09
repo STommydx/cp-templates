@@ -7,6 +7,8 @@
 #define SPARSE_TABLE_HPP
 
 #include <bit>
+#include <cstddef>
+#include <functional>
 #include <vector>
 
 template <class T, class Op = std::bit_or<>> class sparse_table {

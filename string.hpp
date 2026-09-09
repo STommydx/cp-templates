@@ -6,13 +6,18 @@
 #ifndef STRING_HPP
 #define STRING_HPP
 
+#include <algorithm>
 #include <array>
-#include <cctype>
+#include <cstddef>
+#include <functional>
+#include <iterator>
 #include <queue>
 #include <ranges>
 #include <span>
 #include <stdexcept>
+#include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "functional.hpp"

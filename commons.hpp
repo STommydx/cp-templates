@@ -6,6 +6,7 @@
 #ifndef COMMONS_HPP
 #define COMMONS_HPP
 
+#include <functional>
 #include <queue>
 #include <utility>
 #include <vector>

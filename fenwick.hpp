@@ -6,6 +6,7 @@
 #ifndef FENWICK_HPP
 #define FENWICK_HPP
 
+#include <cstddef>
 #include <vector>
 
 template <class T> class fenwick {

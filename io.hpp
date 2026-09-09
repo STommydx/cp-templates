@@ -6,10 +6,13 @@
 #ifndef IO_HPP
 #define IO_HPP
 
+#include <cstddef>
 #include <deque>
 #include <functional>
 #include <iostream>
 #include <ranges>
+#include <tuple>
+#include <utility>
 #include <valarray>
 #include <vector>
 

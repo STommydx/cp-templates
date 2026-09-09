@@ -6,10 +6,15 @@
 #ifndef GRAPH_HPP
 #define GRAPH_HPP
 
+#include <cstddef>
+#include <deque>
+#include <functional>
 #include <iostream>
+#include <iterator>
 #include <optional>
 #include <queue>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include "io.hpp"

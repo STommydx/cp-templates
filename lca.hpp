@@ -8,6 +8,11 @@
 #define LCA_HPP
 
 #include <bit>
+#include <cstddef>
+#include <functional>
+#include <optional>
+#include <utility>
+#include <vector>
 
 #include "graph.hpp"
 

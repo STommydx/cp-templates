@@ -6,7 +6,11 @@
 #ifndef FLOW_HPP
 #define FLOW_HPP
 
+#include <functional>
+#include <iterator>
+#include <queue>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 #include "graph.hpp"

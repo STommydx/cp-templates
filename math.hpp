@@ -9,6 +9,8 @@
 #include <array>
 #include <bit>
 #include <concepts>
+#include <functional>
+#include <type_traits>
 
 template <std::unsigned_integral T> constexpr T isqrt(T x) {
 	if (x == 0)

@@ -6,6 +6,7 @@
 #ifndef DSU_HPP
 #define DSU_HPP
 
+#include <cstddef>
 #include <functional>
 #include <utility>
 #include <vector>

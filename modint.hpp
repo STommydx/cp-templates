@@ -7,6 +7,8 @@
 #define MODINT_HPP
 
 #include <concepts>
+#include <cstddef>
+#include <functional>
 #include <iostream>
 #include <limits>
 #include <type_traits>

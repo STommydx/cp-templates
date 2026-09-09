@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <functional>
 #include <numeric>
+#include <utility>
 
 namespace fn {
 template <class T = void, class Proj = std::identity,

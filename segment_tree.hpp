@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <bit>
+#include <cstddef>
 #include <functional>
 #include <optional>
 #include <stdexcept>

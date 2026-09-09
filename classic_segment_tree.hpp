@@ -6,8 +6,12 @@
 #ifndef CLASSIC_SEGMENT_TREE_HPP
 #define CLASSIC_SEGMENT_TREE_HPP
 
+#include <concepts>
+#include <cstddef>
+#include <functional>
 #include <optional>
 #include <stdexcept>
+#include <vector>
 
 #include "functional.hpp"
 
