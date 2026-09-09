@@ -3,8 +3,18 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
+#include <deque>
 #include <stdexcept>
 #include <string>
+#include <utility>
+
+template <class R>
+concept suffix_array_constructible =
+    requires(R &&range) { suffix_array(std::forward<R>(range)); };
+
+static_assert(suffix_array_constructible<std::string &>);
+static_assert(!suffix_array_constructible<std::deque<char> &>);
+static_assert(!suffix_array_constructible<std::string>);
 
 TEST_CASE("prefix function behaves as expected", "[string]") {
 	REQUIRE(prefix_function("baobaba") ==

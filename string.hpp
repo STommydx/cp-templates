@@ -12,6 +12,7 @@
 #include <ranges>
 #include <span>
 #include <stdexcept>
+#include <type_traits>
 #include <vector>
 
 #include "functional.hpp"
@@ -494,25 +495,30 @@ template <class T> class suffix_array : public std::vector<int> {
 	std::vector<int> rank;
 	std::vector<int> lcp;
 
-	template <std::ranges::random_access_range R>
-	    requires std::ranges::sized_range<R>
+	template <class R>
+	    requires std::ranges::contiguous_range<R> &&
+	             std::ranges::sized_range<R> && std::is_lvalue_reference_v<R &&>
 	suffix_array(R &&s, const std::pair<vector<int>, vector<int>> &sa_result)
 	    : suffix_array(std::forward<R>(s), sa_result.first, sa_result.second) {}
 
   public:
-	template <std::ranges::random_access_range R>
-	    requires std::ranges::sized_range<R>
+	template <class R>
+	    requires std::ranges::contiguous_range<R> &&
+	                 std::ranges::sized_range<R> &&
+	                 std::is_lvalue_reference_v<R &&>
 	suffix_array(R &&s, const std::vector<int> &sa,
 	             const std::vector<int> &rank, const std::vector<int> &lcp)
 	    : vector<int>(sa), s(s), rank(rank), lcp(lcp) {}
-	template <std::ranges::random_access_range R>
-	    requires std::ranges::sized_range<R>
+	template <class R>
+	    requires std::ranges::contiguous_range<R> &&
+	             std::ranges::sized_range<R> && std::is_lvalue_reference_v<R &&>
 	suffix_array(R &&s, const std::vector<int> &sa,
 	             const std::vector<int> &rank)
 	    : suffix_array(std::forward<R>(s), sa, rank,
 	                   build_lcp(std::forward<R>(s), sa, rank)) {}
-	template <std::ranges::random_access_range R>
-	    requires std::ranges::sized_range<R>
+	template <class R>
+	    requires std::ranges::contiguous_range<R> &&
+	             std::ranges::sized_range<R> && std::is_lvalue_reference_v<R &&>
 	suffix_array(R &&s)
 	    : suffix_array(std::forward<R>(s),
 	                   build_suffix_array(std::forward<R>(s))) {}
