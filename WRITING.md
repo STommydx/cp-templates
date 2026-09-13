@@ -31,6 +31,7 @@ Link to package READMEs or documents that exist in the repository. Do not cite t
 - A body comment explains why a surprising branch or value is required. It does not repeat the next line.
 - A test comment names the behavior under test and the failure it would catch.
 - Keep long design explanations in the package README rather than in source comments.
+This is not a ban on inline comments. A short comment is appropriate when the code's contract, invariant, or workaround is not recoverable from the surrounding names and control flow.
 
 ## Source contexts
 

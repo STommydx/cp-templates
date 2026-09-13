@@ -34,6 +34,8 @@ The receiver binds to `127.0.0.1:27121`. PageMole sends a versioned JSON envelop
 The default storage root is `$XDG_DATA_HOME/ccli/statements` on systems that define `XDG_DATA_HOME`. Platform defaults come from `github.com/adrg/xdg`. Pass `--output-dir DIR` on the `statement` parent command to use another root for both serving and lookup commands.
 
 The first adapter is `hkoi`. It maps `judge.hkoi.org/task/` pages. Use `--adapter hkoi` when a neutral local fixture should use the HKOI page structure without matching that public URL.
+The HKOI selector and extraction contract is documented in [`statement/adapters/hkoi/README.md`](statement/adapters/hkoi/README.md), including the page-level `.task-info`/`.task` split, sample-table rules, and fallback behavior.
+Generic adapter authoring, lifecycle, extraction, and test requirements are documented in [`statement/README.md`](statement/README.md).
 
 ## Statement commands
 

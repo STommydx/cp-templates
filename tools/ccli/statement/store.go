@@ -16,10 +16,12 @@ import (
 )
 
 const (
+	// DefaultDataSubdir is the durable XDG-relative storage location.
 	DefaultDataSubdir = "ccli/statements"
 	receiptLayout     = "20060102T150405.000000Z"
 )
 
+// ResolveRoot returns the explicit absolute override or the platform XDG data root.
 func ResolveRoot(override string) (string, error) {
 	if override != "" {
 		absolute, err := filepath.Abs(override)
@@ -31,6 +33,7 @@ func ResolveRoot(override string) (string, error) {
 	return filepath.Join(xdg.DataHome, DefaultDataSubdir), nil
 }
 
+// EnsureRoot creates the durable storage root with private permissions.
 func EnsureRoot(root string) error {
 	if root == "" {
 		return errors.New("storage root is empty")
@@ -41,6 +44,7 @@ func EnsureRoot(root string) error {
 	return os.Chmod(root, 0o700)
 }
 
+// CleanupStaging removes interrupted writes without touching completed captures.
 func CleanupStaging(root string) error {
 	staging := filepath.Join(root, ".staging")
 	if err := os.MkdirAll(staging, 0o700); err != nil {
@@ -58,6 +62,7 @@ func CleanupStaging(root string) error {
 	return nil
 }
 
+// StoreCapture atomically writes one immutable capture and returns its root-relative directory.
 func StoreCapture(root string, capture *CaptureEnvelope, result ParseResult, receivedAt time.Time) (string, error) {
 	if capture == nil {
 		return "", errors.New("capture is nil")

@@ -8,11 +8,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// UsageError marks invalid flags, arguments, selectors, formats, or adapter IDs.
 type UsageError struct {
 	Err error
 }
 
+// Error implements error for UsageError.
 func (e *UsageError) Error() string { return e.Err.Error() }
+
+// Unwrap exposes the underlying Cobra or validation error.
 func (e *UsageError) Unwrap() error { return e.Err }
 
 func usageError(format string, args ...any) error {
@@ -29,6 +33,7 @@ var rootCmd = &cobra.Command{
 It is useful for consolidating templates into single file for online judge submissions. It also contains utilities that aids running program against downloaded testcases and submitting to online judges.`,
 }
 
+// Execute runs ccli and maps usage failures to exit 2 and runtime failures to exit 1.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

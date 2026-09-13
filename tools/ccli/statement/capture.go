@@ -9,8 +9,10 @@ import (
 	"time"
 )
 
+// MaxCaptureBytes is the maximum accepted PageMole request size.
 const MaxCaptureBytes = 8 << 20
 
+// ValidationKind distinguishes malformed JSON from valid JSON that violates the envelope schema.
 type ValidationKind string
 
 const (
@@ -18,14 +20,19 @@ const (
 	ValidationSchema    ValidationKind = "schema"
 )
 
+// CaptureValidationError reports a malformed or schema-invalid PageMole envelope.
 type CaptureValidationError struct {
 	Kind ValidationKind
 	Err  error
 }
 
+// Error implements error for CaptureValidationError.
 func (e *CaptureValidationError) Error() string { return e.Err.Error() }
+
+// Unwrap exposes the underlying decode or validation error.
 func (e *CaptureValidationError) Unwrap() error { return e.Err }
 
+// CaptureEnvelope is the versioned wire payload sent by PageMole.
 type CaptureEnvelope struct {
 	Type       string   `json:"type" required:"true" enum:"statement-html" doc:"Capture payload type"`
 	Version    int      `json:"version" required:"true" minimum:"1" maximum:"1" doc:"Capture payload version"`
@@ -38,6 +45,7 @@ type CaptureEnvelope struct {
 	raw []byte
 }
 
+// RawBytes returns a copy of the exact decoded request body when available.
 func (c *CaptureEnvelope) RawBytes() []byte {
 	if c == nil || c.raw == nil {
 		return nil
@@ -45,6 +53,7 @@ func (c *CaptureEnvelope) RawBytes() []byte {
 	return bytes.Clone(c.raw)
 }
 
+// CaptureTime parses the browser-provided RFC3339 timestamp.
 func (c *CaptureEnvelope) CaptureTime() (time.Time, error) {
 	if c == nil {
 		return time.Time{}, errors.New("capture is nil")
@@ -52,6 +61,7 @@ func (c *CaptureEnvelope) CaptureTime() (time.Time, error) {
 	return time.Parse(time.RFC3339, c.CapturedAt)
 }
 
+// ParsedURL parses the absolute source URL from the capture.
 func (c *CaptureEnvelope) ParsedURL() (*url.URL, error) {
 	if c == nil {
 		return nil, errors.New("capture is nil")
@@ -63,6 +73,7 @@ func (c *CaptureEnvelope) ParsedURL() (*url.URL, error) {
 	return u, nil
 }
 
+// DecodeCapture validates one PageMole body and retains its exact bytes.
 func DecodeCapture(body []byte) (*CaptureEnvelope, error) {
 	if len(body) > MaxCaptureBytes {
 		return nil, &CaptureValidationError{Kind: ValidationSchema, Err: fmt.Errorf("capture body exceeds %d bytes", MaxCaptureBytes)}

@@ -9,8 +9,10 @@ import (
 	nethtml "golang.org/x/net/html"
 )
 
+// ErrUnknownAdapter indicates that a forced adapter identifier is not registered.
 var ErrUnknownAdapter = errors.New("unknown adapter")
 
+// ParseCapture parses one capture, selects exactly one adapter or fallback, and renders its result.
 func ParseCapture(capture *CaptureEnvelope, adapters []Adapter, options ParseOptions) (ParseResult, error) {
 	if capture == nil {
 		return ParseResult{}, errors.New("capture is nil")

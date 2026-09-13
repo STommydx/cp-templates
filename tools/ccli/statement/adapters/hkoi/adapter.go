@@ -11,16 +11,21 @@ import (
 	nethtml "golang.org/x/net/html"
 )
 
+// Adapter extracts the page-level metadata and statement content used by HKOI task pages.
 type Adapter struct{}
 
+// New returns the registered HKOI adapter.
 func New() statement.Adapter { return Adapter{} }
 
+// ID returns the stable storage and diagnostics identifier.
 func (Adapter) ID() string { return "hkoi" }
 
+// URLPatterns limits automatic selection to public HKOI task pages.
 func (Adapter) URLPatterns() []statement.URLPattern {
 	return []statement.URLPattern{{Host: "judge.hkoi.org", PathPrefix: "/task/"}}
 }
 
+// Match verifies that the rendered document contains the HKOI statement root.
 func (Adapter) Match(_ *statement.CaptureEnvelope, document *nethtml.Node) bool {
 	return statement.FindFirstClass(document, "task") != nil
 }
@@ -31,6 +36,8 @@ var (
 	interactivePattern = regexp.MustCompile(`(?i)interactive\s*:\s*(yes|no|true|false)`)
 )
 
+// Extract reads metadata outside `.task` and statement content inside `.task`.
+// The page-level split is required by the rendered HKOI DOM.
 func (Adapter) Extract(capture *statement.CaptureEnvelope, document *nethtml.Node) (statement.Extraction, error) {
 	root := statement.FindFirstClass(document, "task")
 	if root == nil {

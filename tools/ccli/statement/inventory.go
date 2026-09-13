@@ -12,6 +12,7 @@ import (
 	"time"
 )
 
+// ProblemRecord is the newest logical-problem summary emitted by inventory commands.
 type ProblemRecord struct {
 	Key           string    `json:"key" yaml:"key"`
 	Adapter       string    `json:"adapter" yaml:"adapter"`
@@ -28,11 +29,13 @@ type ProblemRecord struct {
 	Statement     string    `json:"statement" yaml:"statement"`
 }
 
+// CaptureRecord describes one durable capture before logical grouping.
 type CaptureRecord struct {
 	ProblemRecord
 	CaptureName string
 }
 
+// Scan recursively reads valid capture records and returns non-fatal warnings separately.
 func Scan(root string) ([]CaptureRecord, []error) {
 	var records []CaptureRecord
 	var warnings []error
@@ -123,6 +126,7 @@ func Scan(root string) ([]CaptureRecord, []error) {
 	return records, warnings
 }
 
+// Summarize groups captures by logical key and selects the newest record per key.
 func Summarize(records []CaptureRecord) []ProblemRecord {
 	groups := make(map[string][]CaptureRecord)
 	for _, record := range records {
@@ -145,6 +149,7 @@ func Summarize(records []CaptureRecord) []ProblemRecord {
 	return result
 }
 
+// FindCapture resolves a canonical key, unique code, or URL-hash identity.
 func FindCapture(records []CaptureRecord, identifier, captureName string) (CaptureRecord, error) {
 	matches := make([]CaptureRecord, 0)
 	for _, record := range records {

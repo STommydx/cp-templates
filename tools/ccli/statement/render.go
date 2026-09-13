@@ -14,6 +14,7 @@ import (
 
 var numericSampleID = regexp.MustCompile(`^\s*[0-9]+\s*$`)
 
+// HasClass reports whether an element contains one exact CSS class token.
 func HasClass(node *nethtml.Node, name string) bool {
 	if node == nil || node.Type != nethtml.ElementNode {
 		return false
@@ -31,6 +32,7 @@ func HasClass(node *nethtml.Node, name string) bool {
 	return false
 }
 
+// FindFirstClass returns the first element carrying a class token.
 func FindFirstClass(root *nethtml.Node, className string) *nethtml.Node {
 	var found *nethtml.Node
 	Walk(root, func(node *nethtml.Node) bool {
@@ -42,6 +44,7 @@ func FindFirstClass(root *nethtml.Node, className string) *nethtml.Node {
 	return found
 }
 
+// Walk visits a DOM subtree depth-first until the visitor returns false.
 func Walk(root *nethtml.Node, visit func(*nethtml.Node) bool) {
 	if root == nil || !visit(root) {
 		return
@@ -51,6 +54,7 @@ func Walk(root *nethtml.Node, visit func(*nethtml.Node) bool) {
 	}
 }
 
+// TextContent returns concatenated text-node content from a subtree.
 func TextContent(root *nethtml.Node) string {
 	if root == nil {
 		return ""
@@ -65,6 +69,7 @@ func TextContent(root *nethtml.Node) string {
 	return builder.String()
 }
 
+// Attribute returns one exact attribute value.
 func Attribute(node *nethtml.Node, key string) (string, bool) {
 	if node == nil {
 		return "", false
@@ -77,6 +82,7 @@ func Attribute(node *nethtml.Node, key string) (string, bool) {
 	return "", false
 }
 
+// FindTag returns the first element with the requested tag name.
 func FindTag(root *nethtml.Node, tag string) *nethtml.Node {
 	var found *nethtml.Node
 	Walk(root, func(node *nethtml.Node) bool {
@@ -88,6 +94,7 @@ func FindTag(root *nethtml.Node, tag string) *nethtml.Node {
 	return found
 }
 
+// FindTags returns all elements with the requested tag name in document order.
 func FindTags(root *nethtml.Node, tag string) []*nethtml.Node {
 	var found []*nethtml.Node
 	Walk(root, func(node *nethtml.Node) bool {
@@ -106,6 +113,7 @@ type sampleTableResult struct {
 	Complete bool
 }
 
+// ExtractSampleTable finds and extracts one source-independent Input/Output table.
 func ExtractSampleTable(root *nethtml.Node) sampleTableResult {
 	if root == nil {
 		return sampleTableResult{}
@@ -279,6 +287,7 @@ func nearestAncestor(node *nethtml.Node, className string, stop *nethtml.Node) *
 	return nil
 }
 
+// RenderMarkdown builds a readable statement and validates its Markdown AST with Goldmark.
 func RenderMarkdown(title, sourceURL string, capturedAt string, root *nethtml.Node, excluded []*nethtml.Node, samples []Sample, fallback bool) (string, error) {
 	var builder strings.Builder
 	builder.WriteString("# ")
@@ -480,6 +489,7 @@ func normalizeMarkdown(value string) string {
 	return strings.TrimSpace(strings.Join(output, "\n")) + "\n"
 }
 
+// SortStrings returns a sorted copy without modifying the input slice.
 func SortStrings(values []string) []string {
 	result := append([]string(nil), values...)
 	sort.Strings(result)
