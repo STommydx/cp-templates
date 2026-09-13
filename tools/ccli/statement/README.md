@@ -41,6 +41,11 @@ Before registering an adapter, answer these questions in its README and tests:
 
 ## Tests
 
+Fixtures follow the package that owns the DOM shape they encode:
+
+- `statement/testdata/` holds source-independent pages for the shared parser, renderer, storage, and inventory behavior. Shared tests register a test adapter instead of a real one, so no source's selectors leak into the shared package.
+- `statement/adapters/<id>/testdata/` holds pages that mirror one source's captured DOM, and only that adapter's tests read them.
+
 Use a neutral, original fixture that mirrors the source structure without copying a real statement or using a real URL. Test observable behavior:
 
 - URL selection and editor-page exclusion;
@@ -50,5 +55,7 @@ Use a neutral, original fixture that mirrors the source structure without copyin
 - preserved unknown content and warnings;
 - rendered Markdown without duplicate sample tables;
 - a fixture shape copied from captured DOM evidence, not a simplified shape invented for the test.
+
+Remember that PageMole sends `documentElement.outerHTML`, so a fixture should look like a serialized live document: no doctype, page chrome, scripts, and post-render markup such as MathJax output.
 
 The HKOI implementation is the reference adapter: [`adapters/hkoi/README.md`](adapters/hkoi/README.md).

@@ -27,7 +27,22 @@ func (Adapter) URLPatterns() []statement.URLPattern {
 
 // Match verifies that the rendered document contains the HKOI statement root.
 func (Adapter) Match(_ *statement.CaptureEnvelope, document *nethtml.Node) bool {
-	return statement.FindFirstClass(document, "task") != nil
+	return statementRoot(document) != nil
+}
+
+// statementRoot returns the statement container, which is always a div. The
+// site toggles classes on the body element, so a bare class lookup can select
+// page chrome instead of the statement.
+func statementRoot(document *nethtml.Node) *nethtml.Node {
+	var root *nethtml.Node
+	statement.Walk(document, func(node *nethtml.Node) bool {
+		if node.Type == nethtml.ElementNode && node.Data == "div" && statement.HasClass(node, "task") {
+			root = node
+			return false
+		}
+		return true
+	})
+	return root
 }
 
 var (
@@ -39,7 +54,7 @@ var (
 // Extract reads metadata outside `.task` and statement content inside `.task`.
 // The page-level split is required by the rendered HKOI DOM.
 func (Adapter) Extract(capture *statement.CaptureEnvelope, document *nethtml.Node) (statement.Extraction, error) {
-	root := statement.FindFirstClass(document, "task")
+	root := statementRoot(document)
 	if root == nil {
 		return statement.Extraction{}, fmt.Errorf(".task root not found")
 	}

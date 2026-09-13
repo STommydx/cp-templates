@@ -2,6 +2,7 @@ package statement_test
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,70 +10,89 @@ import (
 	"time"
 
 	"github.com/STommydx/cp-templates/tools/ccli/statement"
-	"github.com/STommydx/cp-templates/tools/ccli/statement/adapters/hkoi"
+	nethtml "golang.org/x/net/html"
 )
 
-func TestDecodeAndParseTaskPage(t *testing.T) {
-	htmlBytes := mustRead(t, "testdata/task.html")
-	raw := []byte(`{"type":"statement-html","version":1,"capturedAt":"2026-09-13T00:00:00.000Z","title":"Lantern Network","url":"https://example.invalid/tasks/lantern","html":` + mustJSON(string(htmlBytes)) + `,"futureField":"ignored"}`)
-	capture, err := statement.DecodeCapture(raw)
-	if err != nil {
-		t.Fatal(err)
+// neutralAdapter is a test double for the adapter contract. The shared package
+// is source-independent, so its tests must not depend on a real adapter.
+type neutralAdapter struct{}
+
+func (neutralAdapter) ID() string { return "neutral" }
+
+func (neutralAdapter) URLPatterns() []statement.URLPattern {
+	return []statement.URLPattern{{Host: "example.invalid", PathPrefix: "/tasks/"}}
+}
+
+func (neutralAdapter) Match(_ *statement.CaptureEnvelope, document *nethtml.Node) bool {
+	return statement.FindFirstClass(document, "statement") != nil
+}
+
+func (neutralAdapter) Extract(_ *statement.CaptureEnvelope, document *nethtml.Node) (statement.Extraction, error) {
+	root := statement.FindFirstClass(document, "statement")
+	if root == nil {
+		return statement.Extraction{}, errors.New("statement root not found")
 	}
-	result, err := statement.ParseCapture(capture, []statement.Adapter{hkoi.New()}, statement.ParseOptions{ForcedAdapterID: "hkoi"})
-	if err != nil {
-		t.Fatal(err)
+	extracted := statement.ExtractSampleTable(root)
+	extraction := statement.Extraction{
+		Root:          root,
+		Samples:       extracted.Samples,
+		SamplesAnchor: extracted.Anchor,
+		Excluded:      extracted.Excluded,
+		Metadata: statement.ProblemMetadata{
+			Identity: statement.ProblemIdentity{Code: "NEUTRAL", Title: "Neutral Statement"},
+		},
 	}
-	if result.Mode != "task-page" || result.Metadata.Source.Adapter != "hkoi" {
-		t.Fatalf("unexpected parser provenance: %#v", result.Metadata.Source)
+	// A source may only replace its sample table when every row was extracted.
+	if !extracted.Complete {
+		extraction.Samples = nil
+		extraction.SamplesAnchor = nil
+		extraction.Excluded = nil
+		extraction.Warnings = []string{"sample table was not extracted completely; table preserved"}
 	}
-	if result.Metadata.Identity.Code != "M17" {
+	return extraction, nil
+}
+
+func TestParseStatementFixtureThroughAdapter(t *testing.T) {
+	result := parse(t, neutralCapture(t, "https://example.invalid/tasks/neutral", string(mustRead(t, "testdata/statement.html"))), statement.ParseOptions{})
+
+	if result.Mode != "task-page" || result.Metadata.Source.Adapter != "neutral" {
+		t.Fatalf("unexpected parser provenance: mode=%s adapter=%s", result.Mode, result.Metadata.Source.Adapter)
+	}
+	if result.Metadata.Identity.Code != "NEUTRAL" {
 		t.Fatalf("unexpected code: %q", result.Metadata.Identity.Code)
 	}
-	if result.Metadata.Limits.TimeMS == nil || *result.Metadata.Limits.TimeMS != 2000 {
-		t.Fatalf("unexpected time limit: %#v", result.Metadata.Limits.TimeMS)
+	if len(result.Warnings) != 0 {
+		t.Fatalf("unexpected warnings: %v", result.Warnings)
 	}
-	if result.Metadata.Limits.MemoryMiB == nil || *result.Metadata.Limits.MemoryMiB != 256 {
-		t.Fatalf("unexpected memory limit: %#v", result.Metadata.Limits.MemoryMiB)
-	}
-	if result.Metadata.Limits.TimeRaw != "Time limit: 2 seconds" {
-		t.Fatalf("unexpected raw time limit: %q", result.Metadata.Limits.TimeRaw)
-	}
-	if result.Metadata.Execution.Interactive == nil || *result.Metadata.Execution.Interactive {
-		t.Fatalf("unexpected interactive metadata: %#v", result.Metadata.Execution.Interactive)
-	}
-	if len(result.Metadata.Samples) != 3 || result.Metadata.Samples[0].Input != "8 17\n2 7 1 8 2 4 5 1\n" {
+	if len(result.Metadata.Samples) != 3 || result.Metadata.Samples[0].Input != "8 17\r\n2 7 1 8 2 4 5 1" {
 		t.Fatalf("unexpected samples: %#v", result.Metadata.Samples)
 	}
-	for _, wanted := range []string{"## Description", "## Constraints", "### Sample 1", "```text\n4 1 4\n```", "smallest left endpoint", "<math>", "Optional hint"} {
+
+	for _, wanted := range []string{
+		"## Description",
+		"## Sample Tests",
+		"### Sample 1",
+		"```text\n4 1 4\n```",
+		"| Situation | Required behavior |",
+		"| Multiple segments have the same length | Choose the smallest left endpoint |",
+		"has brightness 18 and the smallest left endpoint.",
+		"![The window never reaches the threshold](https://example.invalid/figures/window.png)",
+		"1 + 2 + 6 = 9",
+		"2×10^{5}",
+		"R_{S}",
+		"  - outer item\n    - inner item",
+		"a\\`b",
+		"Optional hint",
+		"<math",
+	} {
 		if !strings.Contains(result.Markdown, wanted) {
 			t.Errorf("Markdown missing %q:\n%s", wanted, result.Markdown)
 		}
 	}
-	for _, wanted := range []string{
-		"| Situation | Required behavior |",
-		"| Multiple segments have the same length | Choose the smallest left endpoint |",
-		"| A segment reaches the threshold exactly | It is valid |",
-	} {
-		if !strings.Contains(result.Markdown, wanted) {
-			t.Errorf("Markdown missing converted table row %q:\n%s", wanted, result.Markdown)
-		}
-	}
-	for _, wanted := range []string{
-		"has the smallest left endpoint.",
-		"![The window never reaches the threshold](https://example.invalid/figures/lantern-threshold.png)",
-		"No segment of length 1 or 2 is sufficient.",
-		"2×10^{5}",
-		"R_{S}",
-	} {
-		if !strings.Contains(result.Markdown, wanted) {
-			t.Errorf("Markdown lost explanation or inline content %q:\n%s", wanted, result.Markdown)
-		}
-	}
 	if samples, scoring := strings.Index(result.Markdown, "### Sample 1"), strings.Index(result.Markdown, "## Scoring"); samples < 0 || scoring < 0 || samples > scoring {
-		t.Errorf("sample section must render at the sample table position, before later sections:\n%s", result.Markdown)
+		t.Errorf("samples must render where the source table was, before later sections:\n%s", result.Markdown)
 	}
-	for _, unwanted := range []string{"M17 — Lantern Network\n\n## Lantern Network", "this content must not appear", "class=\"samples\"", "Run samples", "\nExplanation\n"} {
+	for _, unwanted := range []string{"Neutral Statement\n\n## Neutral Statement", "this content must not appear", "class=\"samples\"", "Run samples", "\nExplanation\n"} {
 		if strings.Contains(result.Markdown, unwanted) {
 			t.Errorf("Markdown contains excluded content %q:\n%s", unwanted, result.Markdown)
 		}
@@ -84,7 +104,7 @@ func TestFallbackRetainsBodyWithoutSamples(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, err := statement.ParseCapture(capture, []statement.Adapter{hkoi.New()}, statement.ParseOptions{})
+	result, err := statement.ParseCapture(capture, []statement.Adapter{neutralAdapter{}}, statement.ParseOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,13 +120,12 @@ func TestFallbackRetainsBodyWithoutSamples(t *testing.T) {
 }
 
 func TestStorePreservesRawAndCollisions(t *testing.T) {
-	htmlBytes := mustRead(t, "testdata/task.html")
-	raw := []byte(`{"type":"statement-html","version":1,"capturedAt":"2026-09-13T00:00:00Z","title":"Lantern Network","url":"https://example.invalid/tasks/lantern","html":` + mustJSON(string(htmlBytes)) + `}`)
+	raw := neutralCapture(t, "https://example.invalid/tasks/neutral", string(mustRead(t, "testdata/statement.html")))
 	capture, err := statement.DecodeCapture(raw)
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, err := statement.ParseCapture(capture, []statement.Adapter{hkoi.New()}, statement.ParseOptions{ForcedAdapterID: "hkoi"})
+	result, err := statement.ParseCapture(capture, []statement.Adapter{neutralAdapter{}}, statement.ParseOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -141,16 +160,9 @@ func TestStorePreservesRawAndCollisions(t *testing.T) {
 }
 
 func TestRendererStripsActiveContent(t *testing.T) {
-	htmlBytes := `<html><body><div class="task-info"><div class="task-displayid">SEC</div><span>Time limit: 1.000 s</span><span>Memory limit: 256 MB</span></div><div class="task"><p>before&#27;[31mred&#27;[0m after</p><p><a href="javascript:alert(1)">bad link</a></p><p><a href="https://example.invalid/ok">good link</a></p><svg onload="alert(1)"><text>diagram label</text><script>alert(1)</script></svg></div></body></html>`
-	body := []byte(`{"type":"statement-html","version":1,"capturedAt":"2026-09-13T00:00:00Z","title":"Security","url":"https://example.invalid/security","html":` + mustJSON(htmlBytes) + `}`)
-	capture, err := statement.DecodeCapture(body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	result, err := statement.ParseCapture(capture, []statement.Adapter{hkoi.New()}, statement.ParseOptions{ForcedAdapterID: "hkoi"})
-	if err != nil {
-		t.Fatal(err)
-	}
+	html := `<html><body><div class="statement"><p>before&#27;[31mred&#27;[0m after</p><p><a href="javascript:alert(1)">bad link</a></p><p><a href="https://example.invalid/ok">good link</a></p><svg onload="alert(1)"><text>diagram label</text><script>alert(1)</script></svg></div></body></html>`
+	result := parse(t, neutralCapture(t, "https://example.invalid/tasks/neutral", html), statement.ParseOptions{})
+
 	if strings.ContainsRune(result.Markdown, 0x1b) {
 		t.Fatalf("Markdown kept a terminal escape byte:\n%q", result.Markdown)
 	}
@@ -160,24 +172,69 @@ func TestRendererStripsActiveContent(t *testing.T) {
 	if strings.Contains(result.Markdown, "onload") {
 		t.Fatalf("Markdown kept an event handler:\n%s", result.Markdown)
 	}
-	if !strings.Contains(result.Markdown, "https://example.invalid/ok") {
-		t.Fatalf("Markdown dropped a safe link:\n%s", result.Markdown)
-	}
-	if !strings.Contains(result.Markdown, "diagram label") {
-		t.Fatalf("Markdown dropped preserved diagram content:\n%s", result.Markdown)
+	for _, wanted := range []string{"https://example.invalid/ok", "diagram label"} {
+		if !strings.Contains(result.Markdown, wanted) {
+			t.Errorf("Markdown dropped preserved content %q:\n%s", wanted, result.Markdown)
+		}
 	}
 }
 
 func TestParseRejectsPathologicalDOMDepth(t *testing.T) {
 	deep := strings.Repeat("<div>", 2000) + "text" + strings.Repeat("</div>", 2000)
-	body := []byte(`{"type":"statement-html","version":1,"capturedAt":"2026-09-13T00:00:00Z","title":"Deep","url":"https://example.invalid/deep","html":` + mustJSON(deep) + `}`)
+	if _, err := statement.ParseCapture(mustDecode(t, neutralCapture(t, "https://example.invalid/tasks/neutral", deep)), []statement.Adapter{neutralAdapter{}}, statement.ParseOptions{}); err == nil {
+		t.Fatal("deeply nested document was accepted")
+	}
+}
+
+func TestStoreBoundsLongProblemCode(t *testing.T) {
+	capture := mustDecode(t, neutralCapture(t, "https://example.invalid/tasks/neutral", string(mustRead(t, "testdata/statement.html"))))
+	result, err := statement.ParseCapture(capture, []statement.Adapter{neutralAdapter{}}, statement.ParseOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result.Metadata.Identity.Code = strings.Repeat("D", 1000)
+	directory, err := statement.StoreCapture(t.TempDir(), capture, result, time.Now().UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	logicalDirectory := filepath.Base(filepath.Dir(filepath.FromSlash(directory)))
+	if len(logicalDirectory) > 255 {
+		t.Fatalf("logical storage path too long: %d", len(logicalDirectory))
+	}
+}
+
+func parse(t *testing.T, body []byte, options statement.ParseOptions) statement.ParseResult {
+	t.Helper()
+	result, err := statement.ParseCapture(mustDecode(t, body), []statement.Adapter{neutralAdapter{}}, options)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return result
+}
+
+func mustDecode(t *testing.T, body []byte) *statement.CaptureEnvelope {
+	t.Helper()
 	capture, err := statement.DecodeCapture(body)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := statement.ParseCapture(capture, []statement.Adapter{hkoi.New()}, statement.ParseOptions{ForcedAdapterID: "hkoi"}); err == nil {
-		t.Fatal("deeply nested document was accepted")
+	return capture
+}
+
+func neutralCapture(t *testing.T, url, html string) []byte {
+	t.Helper()
+	body, err := json.Marshal(map[string]any{
+		"type":       "statement-html",
+		"version":    1,
+		"capturedAt": "2026-09-13T00:00:00Z",
+		"title":      "Neutral Statement",
+		"url":        url,
+		"html":       html,
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
+	return body
 }
 
 func mustRead(t *testing.T, name string) []byte {
@@ -193,38 +250,11 @@ func mustJSON(value string) string {
 	encoded, _ := json.Marshal(value)
 	return string(encoded)
 }
-func TestStoreBoundsLongProblemCode(t *testing.T) {
-	htmlBytes := mustRead(t, "testdata/task.html")
-	raw := []byte(`{"type":"statement-html","version":1,"capturedAt":"2026-09-13T00:00:00Z","title":"Lantern Network","url":"https://example.invalid/tasks/long","html":` + mustJSON(string(htmlBytes)) + `}`)
-	capture, err := statement.DecodeCapture(raw)
-	if err != nil {
-		t.Fatal(err)
-	}
-	result, err := statement.ParseCapture(capture, []statement.Adapter{hkoi.New()}, statement.ParseOptions{ForcedAdapterID: "hkoi"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	result.Metadata.Identity.Code = strings.Repeat("D", 1000)
-	directory, err := statement.StoreCapture(t.TempDir(), capture, result, time.Now().UTC())
-	if err != nil {
-		t.Fatal(err)
-	}
-	logicalDirectory := filepath.Base(filepath.Dir(filepath.FromSlash(directory)))
-	if len(logicalDirectory) > 255 {
-		t.Fatalf("logical storage path too long: %d", len(logicalDirectory))
-	}
-}
+
 func TestRendererPreservesNestedAndQuotedContent(t *testing.T) {
-	html := "<html><body><div class=\"task-info\"><div class=\"task-displayid\">EDGE</div><span>Time limit: 1.000 s</span><span>Memory limit: 256 MB</span></div><div class=\"task\"><ul><li>outer<ul><li>inner</li></ul></li></ul><p><code>a`b</code></p><pre>first\n```\nsecond</pre><div class=\"samples-wrapper\"><table class=\"samples\"><tr><th>#</th><th>Input</th><th>Output</th></tr><tr class=\"sample\"><td>1</td><td class=\"io\"><pre>x</pre></td><td class=\"io\"><pre>y</pre></td></tr><tr><td colspan=\"3\">first explanation</td></tr><tr><td colspan=\"3\">second explanation</td></tr></table></div></div></body></html>"
-	body := []byte(`{"type":"statement-html","version":1,"capturedAt":"2026-09-13T00:00:00Z","title":"Edge","url":"https://example.invalid/edge","html":` + mustJSON(html) + `}`)
-	capture, err := statement.DecodeCapture(body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	result, err := statement.ParseCapture(capture, []statement.Adapter{hkoi.New()}, statement.ParseOptions{ForcedAdapterID: "hkoi"})
-	if err != nil {
-		t.Fatal(err)
-	}
+	html := "<html><body><div class=\"statement\"><ul><li>outer<ul><li>inner</li></ul></li></ul><p><code>a`b</code></p><pre>first\n```\nsecond</pre><table class=\"samples\"><tr><th>#</th><th>Input</th><th>Output</th></tr><tr class=\"sample\"><td>1</td><td class=\"io\"><pre>x</pre></td><td class=\"io\"><pre>y</pre></td></tr><tr><td colspan=\"3\">first explanation</td></tr><tr><td colspan=\"3\">second explanation</td></tr></table></div></body></html>"
+	result := parse(t, neutralCapture(t, "https://example.invalid/tasks/neutral", html), statement.ParseOptions{})
+
 	for _, wanted := range []string{"- outer\n  - inner", "a\\`b", "first explanation", "second explanation"} {
 		if !strings.Contains(result.Markdown, wanted) {
 			t.Errorf("Markdown missing %q:\n%s", wanted, result.Markdown)
