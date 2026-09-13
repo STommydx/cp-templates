@@ -1,29 +1,79 @@
 <!doctype html>
-<html><head><title>Lantern Network</title><style>.hidden { display: none }</style></head><body>
+<html>
+<head><title>M17 — Lantern Network</title><style>.hidden { display: none }</style></head>
+<body>
 <div class="task">
-  <h1 class="sr-only hidden-print">Duplicate Lantern Network heading</h1>
+  <h1 class="sr-only hidden-print">M17 — Lantern Network</h1>
   <h1>Lantern Network</h1>
-  <div class="task-displayid">LN-1</div>
-  <div class="task-info"><span>Time limit: 1.000 s</span><span>Memory limit: 256 MB</span></div>
-  <p>Lanterns are connected by neutral cables.</p>
-  <h2>Task</h2>
-  <p>Find the number of reachable lanterns.</p>
-  <ul><li>Start at the first lantern.</li><li>Follow every cable.</li></ul>
-  <blockquote>All cable descriptions are deterministic.</blockquote>
-  <details><summary>Note</summary><p>Parallel cables are allowed.</p></details>
-  <p>Use <strong>breadth first search</strong> and <code>queue</code>.</p>
-  <pre>reachable = 1
-queue.push(start)</pre>
-  <p>Distances use <math><mrow><mi>d</mi><mo>=</mo><mn>0</mn></mrow></math>.</p>
-  <table class="score"><tr><th>Subtask</th><th>Points</th></tr><tr><td>1</td><td>50</td></tr></table>
+  <div class="task-displayid">M17</div>
+  <div class="task-info">
+    <span>Time limit: 2 seconds</span>
+    <span>Memory limit: 256 MiB</span>
+    <span>Input: standard input</span>
+    <span>Output: standard output</span>
+    <span>Test type: single test</span>
+    <span>Interactive: No</span>
+  </div>
+
+  <h2>Description</h2>
+  <p>A town has <math><mi>N</mi></math> lantern posts arranged along one road. Post <math><mi>i</mi></math> contributes brightness <math><msub><mi>a</mi><mi>i</mi></msub></math> when it is included in a powered segment.</p>
+  <p>A segment is a contiguous interval of posts. For a segment <math><mrow><mo>[</mo><mi>l</mi><mo>,</mo><mi>r</mi><mo>]</mo></mrow></math>, its total brightness is</p>
+  <p><math><mrow><mi>B</mi><mo>(</mo><mi>l</mi><mo>,</mo><mi>r</mi><mo>)</mo><mo>=</mo><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mi>l</mi></mrow><mi>r</mi></munderover><msub><mi>a</mi><mi>i</mi></msub></mrow></math>.</p>
+  <p>Your task is to find the <strong>shortest</strong> segment whose total brightness is at least <math><mi>S</mi></math>.</p>
+  <p>If several shortest segments exist, choose the one with the smallest left endpoint. If no valid segment exists, report that fact.</p>
+  <p>The posts are numbered from <math><mn>1</mn></math> to <math><mi>N</mi></math>.</p>
+
+  <h2>Input</h2>
+  <p>The input consists of:</p>
+  <ul>
+    <li>one line containing two positive integers <math><mi>N</mi></math> and <math><mi>S</mi></math>;</li>
+    <li>one line containing <math><mi>N</mi></math> positive integers <math><msub><mi>a</mi><mn>1</mn></msub></math>, <math><msub><mi>a</mi><mn>2</mn></msub></math>, ..., <math><msub><mi>a</mi><mi>N</mi></msub></math>.</li>
+  </ul>
+
+  <h2>Output</h2>
+  <p>Print two integers:</p>
+  <ul>
+    <li>the length of the chosen segment;</li>
+    <li>its left and right endpoints.</li>
+  </ul>
+  <p>If no segment has total brightness at least <math><mi>S</mi></math>, print:</p>
+  <pre>-1 -1</pre>
+  <p>The answer must satisfy:</p>
+  <pre>length = right - left + 1
+sum(a[left..right]) &gt;= S</pre>
+
+  <h2>Constraints</h2>
+  <ul>
+    <li><math><mn>1</mn><mo>≤</mo><mi>N</mi><mo>≤</mo><mn>200000</mn></math></li>
+    <li><math><mn>1</mn><mo>≤</mo><mi>S</mi><mo>≤</mo><msup><mn>10</mn><mn>18</mn></msup></math></li>
+    <li><math><mn>1</mn><mo>≤</mo><msub><mi>a</mi><mi>i</mi></msub><mo>≤</mo><msup><mn>10</mn><mn>9</mn></msup></math></li>
+  </ul>
+  <p>The answer may exceed the range of a 32-bit signed integer, so use a sufficiently wide integer type for intermediate sums.</p>
+
+  <h2>Additional observations</h2>
+  <table class="details"><tr><th>Situation</th><th>Required behavior</th></tr>
+    <tr><td>The whole array is the shortest valid segment</td><td>Print <code>1 N</code></td></tr>
+    <tr><td>Multiple segments have the same length</td><td>Choose the smallest left endpoint</td></tr>
+    <tr><td>No segment reaches the threshold</td><td>Print <code>-1 -1</code></td></tr>
+    <tr><td>A segment reaches the threshold exactly</td><td>It is valid</td></tr>
+  </table>
+  <blockquote>The brightness values are always positive. This property is important when reasoning about how the left endpoint can move.</blockquote>
+  <details><summary>Optional hint</summary><p>Consider maintaining a window whose total brightness is at least <math><mi>S</mi></math>. Whenever the window is valid, try removing posts from its left side while preserving validity.</p></details>
+
   <div class="samples-wrapper">
     <table class="samples"><thead><tr><th>#</th><th>Input</th><th>Output</th></tr></thead><tbody>
-      <tr class="sample"><td>1</td><td class="io" data-raw="Mwo="><pre>not the raw bytes</pre></td><td class="io"><pre>1</pre></td></tr>
-      <tr class="explanation"><td colspan="3">The first lantern reaches itself.</td></tr>
-      <tr class="sample"><td>2</td><td class="io"><pre>4 0</pre></td><td class="io"><pre>0</pre></td></tr>
+      <tr class="sample"><td>1</td><td class="io" data-raw="OCAxNwoyIDcgMSA4IDIgNCA1IDEK"><pre>ignored by data-raw</pre></td><td class="io"><pre>4 1 4</pre></td></tr>
+      <tr class="explanation"><td colspan="3">The segment [1,4] has brightness 2 + 7 + 1 + 8 = 18 and has length 4. Other valid segments of length 4 exist, but this one has the smallest left endpoint.</td></tr>
+      <tr class="sample"><td>2</td><td class="io"><pre>5 20
+3 1 4 2 6</pre></td><td class="io"><pre>-1 -1</pre></td></tr>
+      <tr class="explanation"><td colspan="3">The total brightness of all posts is smaller than 20.</td></tr>
+      <tr class="sample"><td>3</td><td class="io"><pre>6 9
+4 1 2 6 1 3</pre></td><td class="io"><pre>3 2 4</pre></td></tr>
+      <tr class="explanation"><td colspan="3">The chosen segment is [2,4] and has brightness 1 + 2 + 6 = 9. No segment of length 1 or 2 is sufficient.</td></tr>
       <tr class="run-control"><td colspan="3"><button type="button">Run samples</button></td></tr>
     </tbody></table>
   </div>
 </div>
 <script>this content must not appear</script>
-</body></html>
+</body>
+</html>

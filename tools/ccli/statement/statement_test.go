@@ -26,24 +26,30 @@ func TestDecodeAndParseTaskPage(t *testing.T) {
 	if result.Mode != "task-page" || result.Metadata.Source.Adapter != "hkoi" {
 		t.Fatalf("unexpected parser provenance: %#v", result.Metadata.Source)
 	}
-	if result.Metadata.Identity.Code != "LN-1" {
+	if result.Metadata.Identity.Code != "M17" {
 		t.Fatalf("unexpected code: %q", result.Metadata.Identity.Code)
 	}
-	if result.Metadata.Limits.TimeMS == nil || *result.Metadata.Limits.TimeMS != 1000 {
+	if result.Metadata.Limits.TimeMS == nil || *result.Metadata.Limits.TimeMS != 2000 {
 		t.Fatalf("unexpected time limit: %#v", result.Metadata.Limits.TimeMS)
 	}
 	if result.Metadata.Limits.MemoryMiB == nil || *result.Metadata.Limits.MemoryMiB != 256 {
 		t.Fatalf("unexpected memory limit: %#v", result.Metadata.Limits.MemoryMiB)
 	}
-	if len(result.Metadata.Samples) != 2 || result.Metadata.Samples[0].Input != "3\n" {
+	if result.Metadata.Limits.TimeRaw != "Time limit: 2 seconds" {
+		t.Fatalf("unexpected raw time limit: %q", result.Metadata.Limits.TimeRaw)
+	}
+	if result.Metadata.Execution.Interactive == nil || *result.Metadata.Execution.Interactive {
+		t.Fatalf("unexpected interactive metadata: %#v", result.Metadata.Execution.Interactive)
+	}
+	if len(result.Metadata.Samples) != 3 || result.Metadata.Samples[0].Input != "8 17\n2 7 1 8 2 4 5 1\n" {
 		t.Fatalf("unexpected samples: %#v", result.Metadata.Samples)
 	}
-	for _, wanted := range []string{"## Task", "### Sample 1", "```text\n3\n```", "The first lantern reaches itself.", "<math>", "<table class=\"score\">", "breadth first search"} {
+	for _, wanted := range []string{"## Description", "## Constraints", "### Sample 1", "```text\n4 1 4\n```", "smallest left endpoint", "<math>", "<table class=\"details\">", "Optional hint"} {
 		if !strings.Contains(result.Markdown, wanted) {
 			t.Errorf("Markdown missing %q:\n%s", wanted, result.Markdown)
 		}
 	}
-	for _, unwanted := range []string{"Duplicate Lantern Network heading", "this content must not appear", "class=\"samples\"", "Run samples"} {
+	for _, unwanted := range []string{"M17 — Lantern Network\n\n## Lantern Network", "this content must not appear", "class=\"samples\"", "Run samples"} {
 		if strings.Contains(result.Markdown, unwanted) {
 			t.Errorf("Markdown contains excluded content %q:\n%s", unwanted, result.Markdown)
 		}
@@ -106,7 +112,7 @@ func TestStorePreservesRawAndCollisions(t *testing.T) {
 		t.Fatalf("inventory scan: captures=%d warnings=%v", len(captures), warnings)
 	}
 	records := statement.Summarize(captures)
-	if len(records) != 1 || records[0].CaptureCount != 2 || records[0].SamplesCount != 2 {
+	if len(records) != 1 || records[0].CaptureCount != 2 || records[0].SamplesCount != 3 {
 		t.Fatalf("unexpected summary: %#v", records)
 	}
 }

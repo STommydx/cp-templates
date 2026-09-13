@@ -279,7 +279,7 @@ func nearestAncestor(node *nethtml.Node, className string, stop *nethtml.Node) *
 	return nil
 }
 
-func RenderMarkdown(title, sourceURL string, capturedAt string, root *nethtml.Node, excluded []*nethtml.Node, samples []Sample, fallback bool) string {
+func RenderMarkdown(title, sourceURL string, capturedAt string, root *nethtml.Node, excluded []*nethtml.Node, samples []Sample, fallback bool) (string, error) {
 	var builder strings.Builder
 	builder.WriteString("# ")
 	builder.WriteString(strings.TrimSpace(title))
@@ -305,7 +305,7 @@ func RenderMarkdown(title, sourceURL string, capturedAt string, root *nethtml.No
 			builder.WriteString(renderNode(sample.Explanation, state))
 		}
 	}
-	return normalizeMarkdown(builder.String())
+	return BuildMarkdown(normalizeMarkdown(builder.String()))
 }
 
 type renderState struct {

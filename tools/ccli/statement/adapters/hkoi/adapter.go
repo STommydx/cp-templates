@@ -26,8 +26,9 @@ func (Adapter) Match(_ *statement.CaptureEnvelope, document *nethtml.Node) bool 
 }
 
 var (
-	timeLimitPattern   = regexp.MustCompile(`(?i)time[^0-9]*([0-9]+(?:\.[0-9]+)?)\s*(ms|s|sec|secs|min|m)`)
+	timeLimitPattern   = regexp.MustCompile(`(?i)time[^0-9]*([0-9]+(?:\.[0-9]+)?)\s*(milliseconds?|ms|seconds?|secs?|minutes?|mins?|s|m)`)
 	memoryLimitPattern = regexp.MustCompile(`(?i)memory[^0-9]*([0-9]+(?:\.[0-9]+)?)\s*(mib|mb|gib|gb)`)
+	interactivePattern = regexp.MustCompile(`(?i)interactive\s*:\s*(yes|no|true|false)`)
 )
 
 func (Adapter) Extract(capture *statement.CaptureEnvelope, document *nethtml.Node) (statement.Extraction, error) {
@@ -42,10 +43,10 @@ func (Adapter) Extract(capture *statement.CaptureEnvelope, document *nethtml.Nod
 		metadata.Identity.Code = strings.TrimSpace(statement.TextContent(displayID))
 	}
 	if info := statement.FindFirstClass(root, "task-info"); info != nil {
-		parseLimits(statement.TextContent(info), &metadata.Limits)
-		text := strings.ToLower(statement.TextContent(info))
-		if strings.Contains(text, "interactive") {
-			interactive := !strings.Contains(text, "non-interactive")
+		infoText := statement.TextContent(info)
+		parseLimits(infoText, &metadata.Limits)
+		if match := interactivePattern.FindStringSubmatch(infoText); len(match) == 2 {
+			interactive := strings.EqualFold(match[1], "yes") || strings.EqualFold(match[1], "true")
 			metadata.Execution.Interactive = &interactive
 		}
 	}
@@ -73,11 +74,11 @@ func (Adapter) Extract(capture *statement.CaptureEnvelope, document *nethtml.Nod
 func parseLimits(text string, limits *statement.ProblemLimits) {
 	if match := timeLimitPattern.FindStringSubmatch(text); len(match) == 3 {
 		if value, err := strconv.ParseFloat(match[1], 64); err == nil {
+			unit := strings.ToLower(match[2])
 			multiplier := 1000.0
-			switch strings.ToLower(match[2]) {
-			case "ms":
+			if strings.HasPrefix(unit, "ms") || strings.HasPrefix(unit, "millisecond") {
 				multiplier = 1
-			case "min", "m":
+			} else if strings.HasPrefix(unit, "m") {
 				multiplier = 60_000
 			}
 			canonical := int64(math.Round(value * multiplier))
