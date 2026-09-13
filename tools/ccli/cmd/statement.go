@@ -19,6 +19,7 @@ import (
 	huma "github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
+	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
@@ -350,12 +351,24 @@ func runStatementShow(cmd *cobra.Command, identifier string) error {
 	if err != nil {
 		return err
 	}
+	stdout := cmd.OutOrStdout()
+	if !isTerminalWriter(stdout) {
+		_, err = stdout.Write(content)
+		return err
+	}
 	rendered, err := renderStatementMarkdown(string(content))
 	if err != nil {
 		return fmt.Errorf("render statement Markdown: %w", err)
 	}
-	_, err = io.WriteString(cmd.OutOrStdout(), rendered)
+	_, err = io.WriteString(stdout, rendered)
 	return err
+}
+
+// isTerminalWriter reports whether a destination is interactive. Piped and
+// redirected output keeps the raw Markdown artifact instead of the rendered form.
+func isTerminalWriter(writer io.Writer) bool {
+	file, ok := writer.(*os.File)
+	return ok && isatty.IsTerminal(file.Fd())
 }
 func renderStatementMarkdown(markdown string) (string, error) {
 	renderer, err := glamour.NewTermRenderer(
