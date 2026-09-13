@@ -1,0 +1,29 @@
+<!doctype html>
+<html><head><title>Lantern Network</title><style>.hidden { display: none }</style></head><body>
+<div class="task">
+  <h1 class="sr-only hidden-print">Duplicate Lantern Network heading</h1>
+  <h1>Lantern Network</h1>
+  <div class="task-displayid">LN-1</div>
+  <div class="task-info"><span>Time limit: 1.000 s</span><span>Memory limit: 256 MB</span></div>
+  <p>Lanterns are connected by neutral cables.</p>
+  <h2>Task</h2>
+  <p>Find the number of reachable lanterns.</p>
+  <ul><li>Start at the first lantern.</li><li>Follow every cable.</li></ul>
+  <blockquote>All cable descriptions are deterministic.</blockquote>
+  <details><summary>Note</summary><p>Parallel cables are allowed.</p></details>
+  <p>Use <strong>breadth first search</strong> and <code>queue</code>.</p>
+  <pre>reachable = 1
+queue.push(start)</pre>
+  <p>Distances use <math><mrow><mi>d</mi><mo>=</mo><mn>0</mn></mrow></math>.</p>
+  <table class="score"><tr><th>Subtask</th><th>Points</th></tr><tr><td>1</td><td>50</td></tr></table>
+  <div class="samples-wrapper">
+    <table class="samples"><thead><tr><th>#</th><th>Input</th><th>Output</th></tr></thead><tbody>
+      <tr class="sample"><td>1</td><td class="io" data-raw="Mwo="><pre>not the raw bytes</pre></td><td class="io"><pre>1</pre></td></tr>
+      <tr class="explanation"><td colspan="3">The first lantern reaches itself.</td></tr>
+      <tr class="sample"><td>2</td><td class="io"><pre>4 0</pre></td><td class="io"><pre>0</pre></td></tr>
+      <tr class="run-control"><td colspan="3"><button type="button">Run samples</button></td></tr>
+    </tbody></table>
+  </div>
+</div>
+<script>this content must not appear</script>
+</body></html>
