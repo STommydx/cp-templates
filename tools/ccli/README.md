@@ -48,7 +48,7 @@ ccli statement path hkoi/UDEV --file capture --capture 20260913T132107.102282Z
 ccli statement show hkoi/UDEV
 ```
 
-`list` returns one row per logical problem and includes the newest capture. It reports `capture_count`, limits, warnings, and sample counts. `root` prints one absolute storage-root path. `path` prints a storage-root-relative capture directory or artifact path. `show` prints Markdown to standard output. Terminal detection and pager integration are not part of this command contract.
+`list` returns one row per logical problem and includes the newest capture. It reports `capture_count`, limits, warnings, and sample counts. `root` prints one absolute storage-root path. `path` prints a storage-root-relative capture directory or artifact path; `path --file statement` identifies the raw Markdown artifact. `show` renders the selected Markdown with Glamour's deterministic terminal style and writes the rendered document to standard output. Pager integration is not part of this command contract.
 
 Structured output uses `table`, `json`, or `yaml`. The JSON and YAML record fields are `key`, `adapter`, `code`, `title`, `time_ms`, `memory_mib`, `captured_at`, `received_at`, `capture_count`, `warnings_count`, `samples_count`, `directory`, and `statement`.
 

@@ -17,6 +17,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/charmbracelet/glamour"
 	huma "github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 	"github.com/spf13/cobra"
@@ -361,8 +362,22 @@ func runStatementShow(cmd *cobra.Command, identifier string) error {
 	if err != nil {
 		return err
 	}
-	_, err = cmd.OutOrStdout().Write(content)
+	rendered, err := renderStatementMarkdown(string(content))
+	if err != nil {
+		return fmt.Errorf("render statement Markdown: %w", err)
+	}
+	_, err = io.WriteString(cmd.OutOrStdout(), rendered)
 	return err
+}
+func renderStatementMarkdown(markdown string) (string, error) {
+	renderer, err := glamour.NewTermRenderer(
+		glamour.WithStylePath("notty"),
+		glamour.WithWordWrap(0),
+	)
+	if err != nil {
+		return "", err
+	}
+	return renderer.Render(markdown)
 }
 
 var captureSelectorPattern = regexp.MustCompile(`^[0-9]{8}T[0-9]{6}\.[0-9]{6}Z(?:-[0-9]{2})?$`)

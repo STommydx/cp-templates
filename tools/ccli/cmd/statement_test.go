@@ -137,3 +137,13 @@ func mustJSONForCommandTest(value string) string {
 	encoded, _ := json.Marshal(value)
 	return string(encoded)
 }
+func TestRenderStatementMarkdown(t *testing.T) {
+	raw := "# Neutral title\n\nA **bold** statement."
+	rendered, err := renderStatementMarkdown(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rendered == raw || !strings.Contains(rendered, "Neutral title") || !strings.Contains(rendered, "bold") {
+		t.Fatalf("unexpected Glamour output: %q", rendered)
+	}
+}

@@ -69,7 +69,7 @@ func StoreCapture(root string, capture *CaptureEnvelope, result ParseResult, rec
 	if result.Mode == "fallback" || adapterID == "" {
 		adapterID = FallbackAdapterID
 	}
-	identity := result.Metadata.Identity.Code
+	identity := safeComponent(result.Metadata.Identity.Code)
 	if identity == "" {
 		identity = "url-" + urlHash(capture.URL)
 	}
@@ -194,6 +194,19 @@ func normalizeURL(rawURL string) (string, error) {
 
 func parseURL(rawURL string) (*url.URL, error) {
 	return url.Parse(rawURL)
+}
+
+func safeComponent(value string) string {
+	var builder strings.Builder
+	for _, runeValue := range value {
+		allowed := (runeValue >= 'a' && runeValue <= 'z') || (runeValue >= 'A' && runeValue <= 'Z') || (runeValue >= '0' && runeValue <= '9') || runeValue == '.' || runeValue == '_' || runeValue == '-'
+		if allowed {
+			builder.WriteRune(runeValue)
+		} else if builder.Len() > 0 && !strings.HasSuffix(builder.String(), "-") {
+			builder.WriteByte('-')
+		}
+	}
+	return strings.Trim(builder.String(), ".-")
 }
 
 func slugify(value string) string {
