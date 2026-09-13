@@ -32,6 +32,7 @@ The main template areas are:
   `tests` executable.
 - `tools/ccli/` contains the Go CLI, its package tests, and repository
   templates used by `ccli init`.
+- `tools/pagemole/` contains the minimal browser extension for capturing rendered HTML; see [`tools/pagemole/README.md`](tools/pagemole/README.md).
 - `examples/` contains worked contest solutions and problem notes.
 - `.github/workflows/cmake.yaml` builds and tests the C++ templates on pushes.
 - `.github/workflows/ccli.yaml` builds and tests the Go CLI on pushes.
