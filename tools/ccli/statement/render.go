@@ -6,13 +6,26 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
-	"sort"
 	"strings"
+	"unicode"
 
 	nethtml "golang.org/x/net/html"
 )
 
-var numericSampleID = regexp.MustCompile(`^\s*[0-9]+\s*$`)
+var (
+	numericSampleID = regexp.MustCompile(`^\s*[0-9]+\s*$`)
+	backtickRun     = regexp.MustCompile("`+")
+)
+
+// markdownEscaper escapes the characters that would change Markdown structure.
+var markdownEscaper = strings.NewReplacer(
+	"\\", "\\\\", "`", "\\`", "*", "\\*", "_", "\\_", "[", "\\[", "]", "\\]", "<", "\\<", ">", "\\>",
+)
+
+// activeContentTags are dropped wherever the renderer copies source markup.
+var activeContentTags = map[string]bool{
+	"script": true, "style": true, "noscript": true, "iframe": true,
+}
 
 // HasClass reports whether an element contains one exact CSS class token.
 func HasClass(node *nethtml.Node, name string) bool {
@@ -314,12 +327,7 @@ func hasContentElement(root *nethtml.Node) bool {
 }
 
 func hasClassAncestor(node *nethtml.Node, className string) bool {
-	for parent := node.Parent; parent != nil; parent = parent.Parent {
-		if HasClass(parent, className) {
-			return true
-		}
-	}
-	return false
+	return nearestAncestor(node.Parent, className, nil) != nil
 }
 
 func nearestAncestor(node *nethtml.Node, className string, stop *nethtml.Node) *nethtml.Node {
@@ -335,8 +343,11 @@ func nearestAncestor(node *nethtml.Node, className string, stop *nethtml.Node) *
 // When samplesAnchor is a descendant of root, the sample section replaces that node.
 func RenderMarkdown(title, sourceURL string, capturedAt string, root *nethtml.Node, samplesAnchor *nethtml.Node, excluded []*nethtml.Node, samples []Sample, fallback bool) (string, error) {
 	var builder strings.Builder
+	counts := blockCounts{}
 	builder.WriteString("# ")
-	builder.WriteString(escapeMarkdownText(strings.TrimSpace(title)))
+	// A heading holds one line, so a multi-line captured title collapses into one.
+	builder.WriteString(escapeMarkdownText(strings.Join(strings.Fields(title), " ")))
+	counts.headings++
 	builder.WriteString("\n\nSource: ")
 	builder.WriteString(SanitizeTerminalText(sourceURL))
 	builder.WriteString("\nCaptured: ")
@@ -348,12 +359,16 @@ func RenderMarkdown(title, sourceURL string, capturedAt string, root *nethtml.No
 	if samplesAnchor != nil && !isDescendantOf(samplesAnchor, root) {
 		samplesAnchor = nil
 	}
-	state := renderState{excluded: nodeSet(excluded), anchor: samplesAnchor, samples: samples}
+	exclusion := make(map[*nethtml.Node]bool, len(excluded))
+	for _, node := range excluded {
+		exclusion[node] = true
+	}
+	state := renderState{excluded: exclusion, anchor: samplesAnchor, samples: samples, counts: &counts}
 	builder.WriteString(renderNode(root, state))
 	if state.anchor == nil {
 		builder.WriteString(renderSampleSection(state))
 	}
-	return BuildMarkdown(normalizeMarkdown(builder.String()))
+	return BuildMarkdown(normalizeMarkdown(builder.String()), counts)
 }
 
 func isDescendantOf(node, ancestor *nethtml.Node) bool {
@@ -369,10 +384,13 @@ func renderSampleSection(state renderState) string {
 	var builder strings.Builder
 	for index, sample := range state.samples {
 		builder.WriteString("\n\n### Sample ")
+		state.counts.heading()
 		builder.WriteString(fmt.Sprint(index + 1))
 		builder.WriteString("\n\nInput\n\n")
+		state.counts.fence()
 		builder.WriteString(fencedText(sample.Input))
 		builder.WriteString("\n\nOutput\n\n")
+		state.counts.fence()
 		builder.WriteString(fencedText(sample.Output))
 		if sample.Explanation != nil {
 			builder.WriteString("\n\n")
@@ -383,18 +401,10 @@ func renderSampleSection(state renderState) string {
 }
 
 type renderState struct {
-	excluded  map[*nethtml.Node]bool
-	anchor    *nethtml.Node
-	samples   []Sample
-	listDepth int
-}
-
-func nodeSet(nodes []*nethtml.Node) map[*nethtml.Node]bool {
-	set := make(map[*nethtml.Node]bool, len(nodes))
-	for _, node := range nodes {
-		set[node] = true
-	}
-	return set
+	excluded map[*nethtml.Node]bool
+	anchor   *nethtml.Node
+	samples  []Sample
+	counts   *blockCounts
 }
 
 func renderNode(node *nethtml.Node, state renderState) string {
@@ -420,7 +430,7 @@ func renderNode(node *nethtml.Node, state renderState) string {
 		return renderChildren(node, state)
 	}
 	tag := strings.ToLower(node.Data)
-	if tag == "script" || tag == "style" || tag == "noscript" || tag == "iframe" {
+	if activeContentTags[tag] {
 		return ""
 	}
 	if (tag == "h1" || tag == "h2" || tag == "h3" || tag == "h4" || tag == "h5" || tag == "h6") && (HasClass(node, "sr-only") || HasClass(node, "hidden-print")) {
@@ -429,6 +439,7 @@ func renderNode(node *nethtml.Node, state renderState) string {
 	switch tag {
 	case "h1", "h2", "h3", "h4", "h5", "h6":
 		level := min(int(tag[1]-'0')+1, 6)
+		state.counts.heading()
 		return "\n\n" + strings.Repeat("#", level) + " " + strings.TrimSpace(renderInlineChildren(node, state)) + "\n\n"
 	case "p":
 		return "\n\n" + strings.TrimSpace(renderInlineChildren(node, state)) + "\n\n"
@@ -444,6 +455,7 @@ func renderNode(node *nethtml.Node, state renderState) string {
 		}
 		return renderInlineCode(renderInlineChildren(node, state))
 	case "pre":
+		state.counts.fence()
 		return "\n\n" + fencedText(TextContent(node)) + "\n\n"
 	case "ul", "ol":
 		return "\n\n" + renderList(node, state, tag == "ol") + "\n\n"
@@ -496,15 +508,14 @@ func renderNode(node *nethtml.Node, state renderState) string {
 // renderTable emits a Markdown table for simple structures and preserves the
 // exact subtree as HTML whenever a conversion would lose cells or formatting.
 func renderTable(node *nethtml.Node, state renderState) string {
+	// A rejected conversion has already rendered cells into a discarded buffer, so
+	// the emitted-block counters roll back with it.
+	emitted := *state.counts
 	if markdown, ok := markdownTable(node, state); ok {
 		return "\n\n" + markdown + "\n\n"
 	}
+	*state.counts = emitted
 	return "\n\n" + serializeHTML(node) + "\n\n"
-}
-
-var tableBlockTags = map[string]bool{
-	"p": true, "div": true, "pre": true, "table": true, "ul": true, "ol": true,
-	"blockquote": true, "details": true, "hr": true, "figure": true, "center": true, "form": true,
 }
 
 func markdownTable(node *nethtml.Node, state renderState) (string, bool) {
@@ -529,10 +540,12 @@ func markdownTable(node *nethtml.Node, state renderState) (string, bool) {
 			if index == 0 && cell.Data != "th" {
 				return "", false
 			}
-			if hasAttribute(cell, "colspan") || hasAttribute(cell, "rowspan") || !convertibleTableCell(cell) {
+			if hasAttribute(cell, "colspan") || hasAttribute(cell, "rowspan") {
 				return "", false
 			}
 			value := renderInlineChildren(cell, state)
+			// A cell that renders across lines or carries its own table cannot be
+			// represented in one Markdown cell.
 			if strings.ContainsAny(value, "|\n") {
 				return "", false
 			}
@@ -581,20 +594,6 @@ func tableRows(node *nethtml.Node) []*nethtml.Node {
 	return rows
 }
 
-func convertibleTableCell(cell *nethtml.Node) bool {
-	convertible := true
-	Walk(cell, func(node *nethtml.Node) bool {
-		if !convertible || node == cell || node.Type != nethtml.ElementNode {
-			return !convertible
-		}
-		if tableBlockTags[strings.ToLower(node.Data)] {
-			convertible = false
-		}
-		return convertible
-	})
-	return convertible
-}
-
 func hasAttribute(node *nethtml.Node, key string) bool {
 	_, ok := Attribute(node, key)
 	return ok
@@ -612,13 +611,21 @@ func renderInlineChildren(node *nethtml.Node, state renderState) string {
 	return normalizeInline(renderChildren(node, state))
 }
 
+func longestBacktickRun(value string) int {
+	longest := 0
+	for _, run := range backtickRun.FindAllString(value, -1) {
+		if len(run) > longest {
+			longest = len(run)
+		}
+	}
+	return longest
+}
+
 func renderInlineCode(value string) string {
 	value = strings.TrimSpace(value)
 	longest := 1
-	for _, run := range regexp.MustCompile("`+").FindAllString(value, -1) {
-		if len(run) >= longest {
-			longest = len(run) + 1
-		}
+	if run := longestBacktickRun(value); run >= 1 {
+		longest = run + 1
 	}
 	delimiter := strings.Repeat("`", longest)
 	if longest > 1 {
@@ -668,13 +675,14 @@ func normalizeInline(value string) string {
 	return strings.Join(strings.Fields(value), " ")
 }
 
-// SanitizeTerminalText removes control characters that can alter terminal output.
+// SanitizeTerminalText removes control characters that can alter terminal output,
+// including the C1 range that carries 8-bit escape introducers.
 func SanitizeTerminalText(value string) string {
 	return strings.Map(func(r rune) rune {
 		if r == '\n' || r == '\r' || r == '\t' {
 			return r
 		}
-		if r < 0x20 || r == 0x7f {
+		if unicode.IsControl(r) {
 			return -1
 		}
 		return r
@@ -682,8 +690,7 @@ func SanitizeTerminalText(value string) string {
 }
 
 func escapeMarkdownText(value string) string {
-	value = SanitizeTerminalText(value)
-	return strings.NewReplacer("\\", "\\\\", "`", "\\`", "*", "\\*", "_", "\\_", "[", "\\[", "]", "\\]", "<", "\\<", ">", "\\>").Replace(value)
+	return markdownEscaper.Replace(SanitizeTerminalText(value))
 }
 
 func safeLinkDestination(value string) string {
@@ -706,10 +713,8 @@ func safeLinkDestination(value string) string {
 func fencedText(value string) string {
 	value = SanitizeTerminalText(strings.TrimRight(value, "\n"))
 	longest := 3
-	for _, run := range regexp.MustCompile("`+").FindAllString(value, -1) {
-		if len(run)+1 > longest {
-			longest = len(run) + 1
-		}
+	if run := longestBacktickRun(value); run+1 > longest {
+		longest = run + 1
 	}
 	fence := strings.Repeat("`", longest)
 	return fence + "text\n" + value + "\n" + fence
@@ -740,7 +745,7 @@ func cloneSafeHTML(node *nethtml.Node) *nethtml.Node {
 		return nil
 	}
 	tag := strings.ToLower(node.Data)
-	if tag == "script" || tag == "style" || tag == "noscript" || tag == "iframe" {
+	if activeContentTags[tag] {
 		return nil
 	}
 	safe := &nethtml.Node{Type: nethtml.ElementNode, Data: node.Data}
@@ -807,11 +812,4 @@ func leadingBackticks(value string) int {
 		count++
 	}
 	return count
-}
-
-// SortStrings returns a sorted copy without modifying the input slice.
-func SortStrings(values []string) []string {
-	result := append([]string(nil), values...)
-	sort.Strings(result)
-	return result
 }

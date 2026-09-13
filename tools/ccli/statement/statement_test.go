@@ -160,11 +160,13 @@ func TestStorePreservesRawAndCollisions(t *testing.T) {
 }
 
 func TestRendererStripsActiveContent(t *testing.T) {
-	html := `<html><body><div class="statement"><p>before&#27;[31mred&#27;[0m after</p><p><a href="javascript:alert(1)">bad link</a></p><p><a href="https://example.invalid/ok">good link</a></p><svg onload="alert(1)"><text>diagram label</text><script>alert(1)</script></svg></div></body></html>`
+	html := `<html><body><div class="statement"><p>before&#27;[31mred&#27;[0m after</p><p>c1&#155;31mred</p><p><a href="javascript:alert(1)">bad link</a></p><p><a href="https://example.invalid/ok">good link</a></p><svg onload="alert(1)"><text>diagram label</text><script>alert(1)</script></svg></div></body></html>`
 	result := parse(t, neutralCapture(t, "https://example.invalid/tasks/neutral", html), statement.ParseOptions{})
 
-	if strings.ContainsRune(result.Markdown, 0x1b) {
-		t.Fatalf("Markdown kept a terminal escape byte:\n%q", result.Markdown)
+	for _, r := range result.Markdown {
+		if r == 0x1b || (r >= 0x80 && r <= 0x9f) {
+			t.Fatalf("Markdown kept control character %U:\n%q", r, result.Markdown)
+		}
 	}
 	if strings.Contains(result.Markdown, "javascript:") {
 		t.Fatalf("Markdown kept an unsafe link destination:\n%s", result.Markdown)

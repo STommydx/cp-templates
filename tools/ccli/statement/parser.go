@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 
 	nethtml "golang.org/x/net/html"
@@ -46,28 +47,20 @@ func ParseCapture(capture *CaptureEnvelope, adapters []Adapter, options ParseOpt
 	for _, candidate := range candidates {
 		ids = append(ids, candidate.ID())
 	}
-	return fallbackResult(capture, document, "multiple adapter URL patterns matched: "+strings.Join(SortStrings(ids), ", "))
+	return fallbackResult(capture, document, "multiple adapter URL patterns matched: "+strings.Join(slices.Sorted(slices.Values(ids)), ", "))
 }
 
 func parseWithAdapter(capture *CaptureEnvelope, document *nethtml.Node, adapter Adapter) (ParseResult, error) {
 	if !adapter.Match(capture, document) {
-		fallbackDocument, err := parseHTML(capture.HTML)
-		if err != nil {
-			return ParseResult{}, fmt.Errorf("reparse fallback html: %w", err)
-		}
-		return fallbackResult(capture, fallbackDocument, fmt.Sprintf("adapter %q structural match failed", adapter.ID()))
+		return fallbackResult(capture, document, fmt.Sprintf("adapter %q structural match failed", adapter.ID()))
 	}
 	extraction, err := adapter.Extract(capture, document)
 	if err != nil || extraction.Root == nil {
-		fallbackDocument, parseErr := parseHTML(capture.HTML)
-		if parseErr != nil {
-			return ParseResult{}, fmt.Errorf("reparse fallback html: %w", parseErr)
-		}
 		reason := fmt.Sprintf("adapter %q extraction failed", adapter.ID())
 		if err != nil {
 			reason += ": " + err.Error()
 		}
-		return fallbackResult(capture, fallbackDocument, reason)
+		return fallbackResult(capture, document, reason)
 	}
 
 	capturedAt, _ := capture.CaptureTime()
