@@ -38,6 +38,8 @@ The first adapter is `hkoi`. It maps `judge.hkoi.org/task/` pages. Use `--adapte
 The HKOI selector and extraction contract is documented in [`statement/adapters/hkoi/README.md`](statement/adapters/hkoi/README.md), including the page-level `.task-info`/`.task` split, sample-table rules, and fallback behavior.
 Generic adapter authoring, lifecycle, extraction, and test requirements are documented in [`statement/README.md`](statement/README.md).
 
+`serve` logs to standard error through `charm.land/log/v2` and takes `--log-level` (`debug`, `info`, `warn`, or `error`, default `info`) and `--log-format` (`text` or `json`, default `text`). It records startup (listen address and storage root), each stored capture with its key, mode, and sample count, one warning record per parser warning, and the cause of storage or parse failures. Huma and HTTP failures are reported by `github.com/go-chi/httplog/v3`: every request at `debug`, and rejected requests at `info` and above.
+
 ## Statement commands
 
 ```bash
@@ -51,7 +53,7 @@ ccli statement path hkoi/UDEV --file capture --capture 20260913T132107.102282Z
 ccli statement show hkoi/UDEV
 ```
 
-`list` returns one row per logical problem and includes the newest capture. It reports `capture_count`, limits, warnings, and sample counts. `root` prints one absolute storage-root path. `path` prints a storage-root-relative capture directory or artifact path; `path --file statement` identifies the raw Markdown artifact. `show` renders the selected Markdown for a terminal with Glamour: the dark theme is the default, a light terminal background advertised through `COLORFGBG` selects the light theme, and `GLAMOUR_STYLE` overrides both. Rendered lines wrap to the terminal width, falling back to 80 columns. Piped or redirected output writes the stored Markdown artifact unchanged. Pager integration is not part of this command contract.
+`list` returns one row per logical problem and includes the newest capture. It reports `capture_count`, limits, warnings, and sample counts. `root` prints one absolute storage-root path. `path` prints a storage-root-relative capture directory or artifact path; `path --file statement` identifies the raw Markdown artifact. `show` renders the selected Markdown for a terminal with Glamour v2, which uses the dark theme by default and honors `GLAMOUR_STYLE`. Rendered lines wrap to the terminal width, falling back to 80 columns. Piped or redirected output writes the stored Markdown artifact unchanged. Pager integration is not part of this command contract.
 
 Structured output uses `table`, `json`, or `yaml`. The JSON and YAML record fields are `key`, `adapter`, `code`, `title`, `time_ms`, `memory_mib`, `captured_at`, `received_at`, `capture_count`, `warnings_count`, `samples_count`, `directory`, and `statement`.
 

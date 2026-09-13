@@ -6,23 +6,24 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
+	"charm.land/glamour/v2"
+	"charm.land/log/v2"
 	"github.com/STommydx/cp-templates/tools/ccli/statement"
 	"github.com/STommydx/cp-templates/tools/ccli/statement/adapters/hkoi"
-	"github.com/charmbracelet/glamour"
-	"github.com/charmbracelet/glamour/styles"
 	huma "github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/httplog/v3"
 	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -36,6 +37,8 @@ var (
 	statementFormat    string
 	statementCapture   string
 	statementFile      string
+	statementLogLevel  string
+	statementLogFormat string
 )
 
 // defaultStatementWidth is the wrapping width when the terminal size is unknown.
@@ -129,6 +132,14 @@ func runStatementServer(cmd *cobra.Command) error {
 	if statementPort < 1 || statementPort > 65535 {
 		return usageError("port must be between 1 and 65535")
 	}
+	level, err := log.ParseLevel(statementLogLevel)
+	if err != nil {
+		return usageError("%v", err)
+	}
+	formatter, err := statementLogFormatter()
+	if err != nil {
+		return usageError("%v", err)
+	}
 	adapters := registeredStatementAdapters()
 	if statementAdapter != "" && findStatementAdapter(adapters, statementAdapter) == nil {
 		return usageError("unknown adapter %q", statementAdapter)
@@ -144,10 +155,16 @@ func runStatementServer(cmd *cobra.Command) error {
 		return fmt.Errorf("clean statement staging: %w", err)
 	}
 
+	logger := log.NewWithOptions(cmd.ErrOrStderr(), log.Options{
+		Level:           level,
+		Formatter:       formatter,
+		ReportTimestamp: true,
+	})
 	router := chi.NewRouter()
+	router.Use(httplog.RequestLogger(slog.New(logger), &httplog.Options{Level: requestLogLevel(logger)}))
 	api := humachi.New(router, huma.DefaultConfig("ccli statement server", "1.0.0"))
 	captureSlots := make(chan struct{}, maxConcurrentCaptures)
-	registerStatementAPI(api, root, adapters, statementAdapter, captureSlots)
+	registerStatementAPI(api, root, adapters, statementAdapter, captureSlots, logger)
 	server := &http.Server{
 		Addr:              fmt.Sprintf("127.0.0.1:%d", statementPort),
 		Handler:           router,
@@ -157,7 +174,34 @@ func runStatementServer(cmd *cobra.Command) error {
 		IdleTimeout:       60 * time.Second,
 		MaxHeaderBytes:    64 << 10,
 	}
-	return serveUntilSignal(server)
+	logger.Info("statement server listening", "addr", fmt.Sprintf("http://127.0.0.1:%d", statementPort))
+	logger.Info("statement storage", "root", root)
+	if err := serveUntilSignal(server); err != nil {
+		return err
+	}
+	logger.Info("statement server stopped")
+	return nil
+}
+
+// statementLogFormatter maps the log format flag onto a charm log formatter.
+func statementLogFormatter() (log.Formatter, error) {
+	switch statementLogFormat {
+	case "", "text":
+		return log.TextFormatter, nil
+	case "json":
+		return log.JSONFormatter, nil
+	default:
+		return 0, fmt.Errorf("unsupported log format %q", statementLogFormat)
+	}
+}
+
+// requestLogLevel reports the lowest response level the request logger records.
+// Debug records every request; coarser levels record failures only.
+func requestLogLevel(logger *log.Logger) slog.Level {
+	if logger.GetLevel() == log.DebugLevel {
+		return slog.LevelDebug
+	}
+	return slog.LevelWarn
 }
 
 func registeredStatementAdapters() []statement.Adapter {
@@ -173,7 +217,7 @@ func findStatementAdapter(adapters []statement.Adapter, id string) statement.Ada
 	return nil
 }
 
-func registerStatementAPI(api huma.API, root string, adapters []statement.Adapter, forcedAdapter string, captureSlots chan struct{}) {
+func registerStatementAPI(api huma.API, root string, adapters []statement.Adapter, forcedAdapter string, captureSlots chan struct{}, logger *log.Logger) {
 	huma.Register[captureInput, captureOutput](api, huma.Operation{
 		OperationID:   "capture-statement-html",
 		Method:        http.MethodPost,
@@ -195,12 +239,18 @@ func registerStatementAPI(api huma.API, root string, adapters []statement.Adapte
 		capture := input.Body.WithRawBytes(input.RawBody)
 		result, err := statement.ParseCapture(&capture, adapters, statement.ParseOptions{ForcedAdapterID: forcedAdapter})
 		if err != nil {
+			logger.Error("capture parse failed", "url", capture.URL, "err", err)
 			return nil, huma.Error500InternalServerError("could not parse capture", err)
 		}
 		receivedAt := time.Now().UTC()
 		directory, err := statement.StoreCapture(root, &capture, result, receivedAt)
 		if err != nil {
+			logger.Error("capture store failed", "url", capture.URL, "err", err)
 			return nil, huma.Error500InternalServerError("could not store capture", err)
+		}
+		logger.Info("capture stored", "key", directory, "mode", result.Mode, "samples", len(result.Metadata.Samples))
+		for _, warning := range result.Warnings {
+			logger.Warn("parser warning", "key", directory, "warning", warning)
 		}
 		return &captureOutput{Body: captureResponse{
 			Mode:      result.Mode,
@@ -378,30 +428,13 @@ func isTerminalWriter(writer io.Writer) bool {
 
 func renderStatementMarkdown(markdown string, width int) (string, error) {
 	renderer, err := glamour.NewTermRenderer(
-		glamour.WithStylePath(statementStyle()),
+		glamour.WithEnvironmentConfig(),
 		glamour.WithWordWrap(width),
 	)
 	if err != nil {
 		return "", err
 	}
 	return renderer.Render(markdown)
-}
-
-// statementStyle returns the styled terminal theme. An explicit GLAMOUR_STYLE
-// wins, the light theme is used only when the terminal advertises a light
-// background through COLORFGBG, and the dark theme is the default. Themes are
-// chosen without querying the terminal so rendering never waits on a reply.
-func statementStyle() string {
-	if style := strings.TrimSpace(os.Getenv("GLAMOUR_STYLE")); style != "" {
-		return style
-	}
-	if background, ok := os.LookupEnv("COLORFGBG"); ok {
-		parts := strings.Split(background, ";")
-		if value, err := strconv.Atoi(strings.TrimSpace(parts[len(parts)-1])); err == nil && value >= 7 {
-			return styles.LightStyle
-		}
-	}
-	return styles.DarkStyle
 }
 
 // terminalWidth returns the interactive width used for wrapping, defaulting to
@@ -448,6 +481,8 @@ func init() {
 	statementCmd.AddCommand(serveStatementCmd, statementRootCmd, statementListCmd, statementPathCmd, statementShowCmd)
 	serveStatementCmd.Flags().StringVar(&statementAdapter, "adapter", "", "Force one statement adapter")
 	serveStatementCmd.Flags().IntVar(&statementPort, "port", 27121, "Loopback server port")
+	serveStatementCmd.Flags().StringVar(&statementLogLevel, "log-level", "info", "Log level: debug, info, warn, or error")
+	serveStatementCmd.Flags().StringVar(&statementLogFormat, "log-format", "text", "Log format: text or json")
 	statementListCmd.Flags().StringVar(&statementFormat, "format", "table", "Output format: table, json, or yaml")
 	statementPathCmd.Flags().StringVar(&statementCapture, "capture", "", "Exact capture timestamp directory")
 	statementPathCmd.Flags().StringVar(&statementFile, "file", "", "Artifact: capture, metadata, or statement")

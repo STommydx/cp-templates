@@ -3,7 +3,9 @@ package cmd
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,11 +15,13 @@ import (
 	"strings"
 	"testing"
 
+	"charm.land/log/v2"
 	"github.com/STommydx/cp-templates/tools/ccli/statement"
 	"github.com/STommydx/cp-templates/tools/ccli/statement/adapters/hkoi"
 	huma "github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/httplog/v3"
 )
 
 func TestStatementAPIContract(t *testing.T) {
@@ -27,7 +31,7 @@ func TestStatementAPIContract(t *testing.T) {
 	}
 	router := chi.NewRouter()
 	api := humachi.New(router, huma.DefaultConfig("ccli statement server", "1.0.0"))
-	registerStatementAPI(api, root, []statement.Adapter{hkoi.New()}, "hkoi", make(chan struct{}, maxConcurrentCaptures))
+	registerStatementAPI(api, root, []statement.Adapter{hkoi.New()}, "hkoi", make(chan struct{}, maxConcurrentCaptures), log.NewWithOptions(io.Discard, log.Options{}))
 	server := httptest.NewServer(router)
 	defer server.Close()
 
@@ -209,22 +213,102 @@ func renderStatementMarkdownForWidth(t *testing.T, markdown string, width int) s
 	return rendered
 }
 
-func TestStatementStyleSelection(t *testing.T) {
-	long := strings.Repeat("word ", 40) + "end."
-
-	t.Setenv("GLAMOUR_STYLE", "")
-	t.Setenv("COLORFGBG", "")
-	dark := renderStatementMarkdownForWidth(t, long, 40)
-
-	t.Setenv("COLORFGBG", "0;15")
-	light := renderStatementMarkdownForWidth(t, long, 40)
-	if dark == light {
-		t.Fatal("light background did not select a different theme")
-	}
-
+func TestRenderStatementMarkdownHonorsGlamourStyle(t *testing.T) {
 	t.Setenv("GLAMOUR_STYLE", "notty")
-	overridden := renderStatementMarkdownForWidth(t, long, 40)
-	if overridden == dark || overridden == light {
-		t.Fatal("GLAMOUR_STYLE did not override the theme")
+	if rendered := renderStatementMarkdownForWidth(t, "# Title\n\nBody text.", 40); strings.Contains(rendered, "\x1b[") {
+		t.Fatalf("GLAMOUR_STYLE was ignored: %q", rendered)
 	}
+}
+
+func TestStatementServerLogsCapturesAndFailures(t *testing.T) {
+	var logged bytes.Buffer
+	logger := log.NewWithOptions(&logged, log.Options{Formatter: log.JSONFormatter})
+	server := newLoggingTestServer(t, logger)
+	defer server.Close()
+
+	body := []byte(`{"type":"statement-html","version":1,"capturedAt":"2026-09-13T00:00:00Z","title":"Neutral","url":"https://example.invalid/tasks/neutral","html":"<html><body><div class=\"task\"><h2>Body</h2><p>Neutral text.</p></div></body></html>"}`)
+	doRequest(t, server.URL+"/", http.MethodPost, "application/json", body).Body.Close()
+	doRequest(t, server.URL+"/other", http.MethodPost, "application/json", body).Body.Close()
+	doRequest(t, server.URL+"/health", http.MethodGet, "", nil).Body.Close()
+
+	records := decodeLogRecords(t, logged.String())
+	stored := findLogRecord(records, "capture stored")
+	if stored == nil {
+		t.Fatalf("capture was not logged: %v", records)
+	}
+	if stored["mode"] != "task-page" || !strings.HasPrefix(fmt.Sprint(stored["key"]), "hkoi/") {
+		t.Fatalf("unexpected capture record: %#v", stored)
+	}
+	if findLogRecord(records, "parser warning") == nil {
+		t.Errorf("parser warning was not logged: %v", records)
+	}
+	if failed := findLogRecordContaining(records, "HTTP 404"); failed == nil {
+		t.Errorf("rejected request was not logged: %v", records)
+	} else if failed["level"] != "warn" {
+		t.Errorf("rejected request was logged at %v", failed["level"])
+	}
+	if findLogRecordContaining(records, "204") != nil {
+		t.Errorf("successful health request was logged at info level: %v", records)
+	}
+}
+
+func TestStatementServerLogsAllRequestsAtDebug(t *testing.T) {
+	var logged bytes.Buffer
+	logger := log.NewWithOptions(&logged, log.Options{Level: log.DebugLevel, Formatter: log.JSONFormatter})
+	server := newLoggingTestServer(t, logger)
+	defer server.Close()
+
+	doRequest(t, server.URL+"/health", http.MethodGet, "", nil).Body.Close()
+
+	if findLogRecordContaining(decodeLogRecords(t, logged.String()), "204") == nil {
+		t.Errorf("debug did not log a successful request: %q", logged.String())
+	}
+}
+
+// newLoggingTestServer installs the request logging wiring the serve command uses.
+func newLoggingTestServer(t *testing.T, logger *log.Logger) *httptest.Server {
+	t.Helper()
+	root := t.TempDir()
+	if err := statement.EnsureRoot(root); err != nil {
+		t.Fatal(err)
+	}
+	router := chi.NewRouter()
+	router.Use(httplog.RequestLogger(slog.New(logger), &httplog.Options{Level: requestLogLevel(logger)}))
+	api := humachi.New(router, huma.DefaultConfig("ccli statement server", "1.0.0"))
+	registerStatementAPI(api, root, []statement.Adapter{hkoi.New()}, "hkoi", make(chan struct{}, maxConcurrentCaptures), logger)
+	return httptest.NewServer(router)
+}
+
+func decodeLogRecords(t *testing.T, output string) []map[string]any {
+	t.Helper()
+	var records []map[string]any
+	for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
+		if line == "" {
+			continue
+		}
+		var record map[string]any
+		if err := json.Unmarshal([]byte(line), &record); err != nil {
+			t.Fatalf("log line is not JSON: %v (%q)", err, line)
+		}
+		records = append(records, record)
+	}
+	return records
+}
+
+func findLogRecord(records []map[string]any, message string) map[string]any {
+	for _, record := range records {
+		if record["msg"] == message {
+			return record
+		}
+	}
+	return nil
+}
+
+func findLogRecordContaining(records []map[string]any, fragment string) map[string]any {
+	for _, record := range records {
+		if message, ok := record["msg"].(string); ok && strings.Contains(message, fragment) {
+			return record
+		}
+	}
+	return nil
 }
