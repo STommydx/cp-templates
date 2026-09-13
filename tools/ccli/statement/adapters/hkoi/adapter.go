@@ -39,10 +39,10 @@ func (Adapter) Extract(capture *statement.CaptureEnvelope, document *nethtml.Nod
 	metadata := statement.ProblemMetadata{
 		Identity: statement.ProblemIdentity{Title: capture.Title},
 	}
-	if displayID := statement.FindFirstClass(root, "task-displayid"); displayID != nil {
+	if displayID := statement.FindFirstClass(document, "task-displayid"); displayID != nil {
 		metadata.Identity.Code = strings.TrimSpace(statement.TextContent(displayID))
 	}
-	if info := statement.FindFirstClass(root, "task-info"); info != nil {
+	if info := statement.FindFirstClass(document, "task-info"); info != nil {
 		infoText := statement.TextContent(info)
 		parseLimits(infoText, &metadata.Limits)
 		if match := interactivePattern.FindStringSubmatch(infoText); len(match) == 2 {
