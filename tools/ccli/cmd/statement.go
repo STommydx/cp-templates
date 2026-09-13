@@ -11,20 +11,22 @@ import (
 	"os/signal"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
+	"github.com/STommydx/cp-templates/tools/ccli/statement"
+	"github.com/STommydx/cp-templates/tools/ccli/statement/adapters/hkoi"
 	"github.com/charmbracelet/glamour"
+	"github.com/charmbracelet/glamour/styles"
 	huma "github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
 	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 	"gopkg.in/yaml.v3"
-
-	"github.com/STommydx/cp-templates/tools/ccli/statement"
-	"github.com/STommydx/cp-templates/tools/ccli/statement/adapters/hkoi"
 )
 
 var (
@@ -35,6 +37,9 @@ var (
 	statementCapture   string
 	statementFile      string
 )
+
+// defaultStatementWidth is the wrapping width when the terminal size is unknown.
+const defaultStatementWidth = 80
 
 const maxConcurrentCaptures = 4
 
@@ -356,7 +361,7 @@ func runStatementShow(cmd *cobra.Command, identifier string) error {
 		_, err = stdout.Write(content)
 		return err
 	}
-	rendered, err := renderStatementMarkdown(string(content))
+	rendered, err := renderStatementMarkdown(string(content), terminalWidth(stdout))
 	if err != nil {
 		return fmt.Errorf("render statement Markdown: %w", err)
 	}
@@ -370,15 +375,47 @@ func isTerminalWriter(writer io.Writer) bool {
 	file, ok := writer.(*os.File)
 	return ok && isatty.IsTerminal(file.Fd())
 }
-func renderStatementMarkdown(markdown string) (string, error) {
+
+func renderStatementMarkdown(markdown string, width int) (string, error) {
 	renderer, err := glamour.NewTermRenderer(
-		glamour.WithStylePath("notty"),
-		glamour.WithWordWrap(0),
+		glamour.WithStylePath(statementStyle()),
+		glamour.WithWordWrap(width),
 	)
 	if err != nil {
 		return "", err
 	}
 	return renderer.Render(markdown)
+}
+
+// statementStyle returns the styled terminal theme. An explicit GLAMOUR_STYLE
+// wins, the light theme is used only when the terminal advertises a light
+// background through COLORFGBG, and the dark theme is the default. Themes are
+// chosen without querying the terminal so rendering never waits on a reply.
+func statementStyle() string {
+	if style := strings.TrimSpace(os.Getenv("GLAMOUR_STYLE")); style != "" {
+		return style
+	}
+	if background, ok := os.LookupEnv("COLORFGBG"); ok {
+		parts := strings.Split(background, ";")
+		if value, err := strconv.Atoi(strings.TrimSpace(parts[len(parts)-1])); err == nil && value >= 7 {
+			return styles.LightStyle
+		}
+	}
+	return styles.DarkStyle
+}
+
+// terminalWidth returns the interactive width used for wrapping, defaulting to
+// the conventional terminal width when the size is unavailable.
+func terminalWidth(writer io.Writer) int {
+	file, ok := writer.(*os.File)
+	if !ok {
+		return defaultStatementWidth
+	}
+	width, _, err := term.GetSize(int(file.Fd()))
+	if err != nil || width <= 0 {
+		return defaultStatementWidth
+	}
+	return width
 }
 
 var captureSelectorPattern = regexp.MustCompile(`^[0-9]{8}T[0-9]{6}\.[0-9]{6}Z(?:-[0-9]{2})?$`)

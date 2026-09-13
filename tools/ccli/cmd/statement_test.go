@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -163,11 +164,67 @@ func captureBodyOfSize(size int) []byte {
 }
 func TestRenderStatementMarkdown(t *testing.T) {
 	raw := "# Neutral title\n\nA **bold** statement."
-	rendered, err := renderStatementMarkdown(raw)
+	rendered, err := renderStatementMarkdown(raw, defaultStatementWidth)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if rendered == raw || !strings.Contains(rendered, "Neutral title") || !strings.Contains(rendered, "bold") {
-		t.Fatalf("unexpected Glamour output: %q", rendered)
+	plain := stripANSI(rendered)
+	if plain == raw {
+		t.Fatalf("Markdown was not rendered: %q", rendered)
+	}
+	if !strings.Contains(plain, "Neutral title") || !strings.Contains(plain, "bold statement") {
+		t.Fatalf("rendered output lost content: %q", plain)
+	}
+	if !strings.Contains(rendered, "\x1b[") {
+		t.Fatalf("terminal rendering emitted no styling: %q", rendered)
+	}
+}
+
+func TestRenderStatementMarkdownWrapsToWidth(t *testing.T) {
+	long := strings.Repeat("word ", 40) + "end."
+	narrow := stripANSI(renderStatementMarkdownForWidth(t, long, 40))
+	wide := stripANSI(renderStatementMarkdownForWidth(t, long, 200))
+	if narrow == wide {
+		t.Fatal("wrapping width was ignored")
+	}
+	for _, line := range strings.Split(narrow, "\n") {
+		if len(line) > 60 {
+			t.Fatalf("line exceeded the requested width: %q", line)
+		}
+	}
+}
+
+var ansiPattern = regexp.MustCompile("\x1b\\[[0-9;?]*[a-zA-Z]")
+
+func stripANSI(value string) string {
+	return ansiPattern.ReplaceAllString(value, "")
+}
+
+func renderStatementMarkdownForWidth(t *testing.T, markdown string, width int) string {
+	t.Helper()
+	rendered, err := renderStatementMarkdown(markdown, width)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return rendered
+}
+
+func TestStatementStyleSelection(t *testing.T) {
+	long := strings.Repeat("word ", 40) + "end."
+
+	t.Setenv("GLAMOUR_STYLE", "")
+	t.Setenv("COLORFGBG", "")
+	dark := renderStatementMarkdownForWidth(t, long, 40)
+
+	t.Setenv("COLORFGBG", "0;15")
+	light := renderStatementMarkdownForWidth(t, long, 40)
+	if dark == light {
+		t.Fatal("light background did not select a different theme")
+	}
+
+	t.Setenv("GLAMOUR_STYLE", "notty")
+	overridden := renderStatementMarkdownForWidth(t, long, 40)
+	if overridden == dark || overridden == light {
+		t.Fatal("GLAMOUR_STYLE did not override the theme")
 	}
 }
