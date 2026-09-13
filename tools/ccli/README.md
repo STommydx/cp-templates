@@ -32,6 +32,7 @@ The receiver binds to `127.0.0.1:27121`. PageMole sends a versioned JSON envelop
 `capture.json` preserves the request body byte-for-byte. `problem.json` records the parser mode, source URL, problem identity, limits, execution metadata, structured samples, warnings, and capture provenance. `statement.md` is the readable statement.
 
 The default storage root is `$XDG_DATA_HOME/ccli/statements` on systems that define `XDG_DATA_HOME`. Platform defaults come from `github.com/adrg/xdg`. Pass `--output-dir DIR` on the `statement` parent command to use another root for both serving and lookup commands.
+The receiver is loopback-only but has no authentication; any local process can submit captures. v1 retains captures indefinitely, so use a private output root and remove unwanted data manually when needed.
 
 The first adapter is `hkoi`. It maps `judge.hkoi.org/task/` pages. Use `--adapter hkoi` when a neutral local fixture should use the HKOI page structure without matching that public URL.
 The HKOI selector and extraction contract is documented in [`statement/adapters/hkoi/README.md`](statement/adapters/hkoi/README.md), including the page-level `.task-info`/`.task` split, sample-table rules, and fallback behavior.

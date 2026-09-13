@@ -211,7 +211,13 @@ func safeComponent(value string) string {
 			builder.WriteByte('-')
 		}
 	}
-	return strings.Trim(builder.String(), ".-")
+	component := strings.Trim(builder.String(), ".-")
+	if len(component) <= 80 {
+		return component
+	}
+	sum := sha256.Sum256([]byte(value))
+	suffix := "-" + hex.EncodeToString(sum[:])[:12]
+	return strings.TrimRight(component[:80-len(suffix)], ".-") + suffix
 }
 
 func slugify(value string) string {

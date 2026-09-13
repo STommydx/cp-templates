@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"syscall"
 	"time"
 
@@ -33,6 +34,8 @@ var (
 	statementCapture   string
 	statementFile      string
 )
+
+const maxConcurrentCaptures = 4
 
 var statementCmd = &cobra.Command{
 	Use:   "statement",
@@ -95,6 +98,15 @@ type captureInput struct {
 	RawBody []byte
 }
 
+// Resolve enforces the domain invariant that captures reference hierarchical pages.
+func (i *captureInput) Resolve(_ huma.Context) []error {
+	u, err := i.Body.ParsedURL()
+	if err != nil || u.Host == "" {
+		return []error{&huma.ErrorDetail{Location: "body.url", Message: "url must be an absolute hierarchical URL"}}
+	}
+	return nil
+}
+
 type captureResponse struct {
 	Mode      string   `json:"mode" doc:"Parser mode"`
 	Directory string   `json:"directory" doc:"Capture directory relative to storage root"`
@@ -128,11 +140,16 @@ func runStatementServer(cmd *cobra.Command) error {
 
 	router := chi.NewRouter()
 	api := humachi.New(router, huma.DefaultConfig("ccli statement server", "1.0.0"))
-	registerStatementAPI(api, root, adapters, statementAdapter)
+	captureSlots := make(chan struct{}, maxConcurrentCaptures)
+	registerStatementAPI(api, root, adapters, statementAdapter, captureSlots)
 	server := &http.Server{
 		Addr:              fmt.Sprintf("127.0.0.1:%d", statementPort),
 		Handler:           router,
 		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    64 << 10,
 	}
 	return serveUntilSignal(server)
 }
@@ -150,7 +167,7 @@ func findStatementAdapter(adapters []statement.Adapter, id string) statement.Ada
 	return nil
 }
 
-func registerStatementAPI(api huma.API, root string, adapters []statement.Adapter, forcedAdapter string) {
+func registerStatementAPI(api huma.API, root string, adapters []statement.Adapter, forcedAdapter string, captureSlots chan struct{}) {
 	huma.Register[captureInput, captureOutput](api, huma.Operation{
 		OperationID:   "capture-statement-html",
 		Method:        http.MethodPost,
@@ -158,9 +175,17 @@ func registerStatementAPI(api huma.API, root string, adapters []statement.Adapte
 		Summary:       "Capture rendered PageMole statement HTML",
 		Description:   "Accept a PageMole statement-html version 1 envelope and persist immutable raw, metadata, and Markdown artifacts.",
 		DefaultStatus: http.StatusCreated,
-		MaxBodyBytes:  statement.MaxCaptureBytes,
-		Errors:        []int{http.StatusBadRequest, http.StatusRequestEntityTooLarge, http.StatusUnsupportedMediaType, http.StatusUnprocessableEntity, http.StatusInternalServerError},
-	}, func(_ context.Context, input *captureInput) (*captureOutput, error) {
+		MaxBodyBytes:  statement.MaxCaptureBytes + 1,
+		Errors:        []int{http.StatusBadRequest, http.StatusRequestEntityTooLarge, http.StatusUnsupportedMediaType, http.StatusUnprocessableEntity, http.StatusInternalServerError, http.StatusServiceUnavailable},
+	}, func(ctx context.Context, input *captureInput) (*captureOutput, error) {
+		if captureSlots != nil {
+			select {
+			case captureSlots <- struct{}{}:
+				defer func() { <-captureSlots }()
+			case <-ctx.Done():
+				return nil, huma.Error503ServiceUnavailable("capture processing capacity is unavailable")
+			}
+		}
 		capture := input.Body.WithRawBytes(input.RawBody)
 		result, err := statement.ParseCapture(&capture, adapters, statement.ParseOptions{ForcedAdapterID: forcedAdapter})
 		if err != nil {
@@ -244,7 +269,7 @@ func writeProblemRecords(writer io.Writer, records []statement.ProblemRecord, fo
 			return err
 		}
 		for _, record := range records {
-			if _, err := fmt.Fprintf(writer, "%s\t%s\t%s\t%s\t%s\n", record.Key, record.Title, formatLimit(record.TimeMS, "ms"), formatLimit(record.MemoryMiB, "MiB"), record.CapturedAt.Format(time.RFC3339)); err != nil {
+			if _, err := fmt.Fprintf(writer, "%s\t%s\t%s\t%s\t%s\n", tableValue(record.Key), tableValue(record.Title), formatLimit(record.TimeMS, "ms"), formatLimit(record.MemoryMiB, "MiB"), record.CapturedAt.Format(time.RFC3339)); err != nil {
 				return err
 			}
 		}
@@ -257,6 +282,10 @@ func formatLimit(value *int64, unit string) string {
 		return "-"
 	}
 	return fmt.Sprintf("%d %s", *value, unit)
+}
+func tableValue(value string) string {
+	value = statement.SanitizeTerminalText(value)
+	return strings.NewReplacer("\n", " ", "\r", " ", "\t", " ").Replace(value)
 }
 
 func runStatementPath(cmd *cobra.Command, identifier string) error {
@@ -309,7 +338,15 @@ func runStatementShow(cmd *cobra.Command, identifier string) error {
 	if err != nil {
 		return err
 	}
-	content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(record.Statement)))
+	path := filepath.Join(root, filepath.FromSlash(record.Statement))
+	info, err := os.Lstat(path)
+	if err != nil {
+		return err
+	}
+	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
+		return fmt.Errorf("statement artifact is not a regular file: %s", path)
+	}
+	content, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}

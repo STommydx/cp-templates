@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"html"
+	"net/url"
 	"regexp"
 	"sort"
 	"strings"
@@ -156,7 +156,11 @@ func ExtractSampleTable(root *nethtml.Node) sampleTableResult {
 			continue
 		}
 		if current != nil && meaningfulExplanation(row) {
-			current.Explanation = explanationNode(row)
+			if current.Explanation == nil {
+				current.Explanation = explanationNode(row)
+			} else {
+				allRowsHandled = false
+			}
 			continue
 		}
 		if rowHasVisibleText(row) && !isTableControl(row) {
@@ -291,11 +295,11 @@ func nearestAncestor(node *nethtml.Node, className string, stop *nethtml.Node) *
 func RenderMarkdown(title, sourceURL string, capturedAt string, root *nethtml.Node, excluded []*nethtml.Node, samples []Sample, fallback bool) (string, error) {
 	var builder strings.Builder
 	builder.WriteString("# ")
-	builder.WriteString(strings.TrimSpace(title))
+	builder.WriteString(escapeMarkdownText(strings.TrimSpace(title)))
 	builder.WriteString("\n\nSource: ")
-	builder.WriteString(sourceURL)
+	builder.WriteString(SanitizeTerminalText(sourceURL))
 	builder.WriteString("\nCaptured: ")
-	builder.WriteString(capturedAt)
+	builder.WriteString(SanitizeTerminalText(capturedAt))
 	builder.WriteString("\n\n")
 	if fallback {
 		builder.WriteString("<!-- fallback: task-page root was absent or unusable; rendered document body -->\n\n")
@@ -336,7 +340,7 @@ func renderNode(node *nethtml.Node, state renderState) string {
 	}
 	switch node.Type {
 	case nethtml.TextNode:
-		return node.Data
+		return escapeMarkdownText(node.Data)
 	case nethtml.CommentNode:
 		return ""
 	case nethtml.DocumentNode, nethtml.ElementNode:
@@ -355,7 +359,7 @@ func renderNode(node *nethtml.Node, state renderState) string {
 	}
 	switch tag {
 	case "h1", "h2", "h3", "h4", "h5", "h6":
-		level := int(tag[1]-'0') + 1
+		level := min(int(tag[1]-'0')+1, 6)
 		return "\n\n" + strings.Repeat("#", level) + " " + strings.TrimSpace(renderInlineChildren(node, state)) + "\n\n"
 	case "p":
 		return "\n\n" + strings.TrimSpace(renderInlineChildren(node, state)) + "\n\n"
@@ -369,7 +373,7 @@ func renderNode(node *nethtml.Node, state renderState) string {
 		if node.Parent != nil && node.Parent.Type == nethtml.ElementNode && node.Parent.Data == "pre" {
 			return TextContent(node)
 		}
-		return "`" + strings.TrimSpace(renderInlineChildren(node, state)) + "`"
+		return renderInlineCode(renderInlineChildren(node, state))
 	case "pre":
 		return "\n\n" + fencedText(TextContent(node)) + "\n\n"
 	case "ul", "ol":
@@ -385,14 +389,19 @@ func renderNode(node *nethtml.Node, state renderState) string {
 		return "\n\n" + strings.Join(lines, "\n") + "\n\n"
 	case "a":
 		text := strings.TrimSpace(renderInlineChildren(node, state))
-		if href, ok := Attribute(node, "href"); ok && href != "" {
-			return "[" + text + "](" + href + ")"
+		if href, ok := Attribute(node, "href"); ok {
+			if destination := safeLinkDestination(href); destination != "" {
+				return "[" + text + "](" + destination + ")"
+			}
 		}
 		return text
 	case "img":
 		alt, _ := Attribute(node, "alt")
 		src, _ := Attribute(node, "src")
-		return fmt.Sprintf("![%s](%s)", alt, src)
+		if destination := safeLinkDestination(src); destination != "" {
+			return fmt.Sprintf("![%s](%s)", escapeMarkdownText(alt), destination)
+		}
+		return escapeMarkdownText(alt)
 	case "table":
 		return "\n\n" + serializeHTML(node) + "\n\n"
 	case "math", "svg":
@@ -417,6 +426,21 @@ func renderInlineChildren(node *nethtml.Node, state renderState) string {
 	return normalizeInline(renderChildren(node, state))
 }
 
+func renderInlineCode(value string) string {
+	value = strings.TrimSpace(value)
+	longest := 1
+	for _, run := range regexp.MustCompile("`+").FindAllString(value, -1) {
+		if len(run) >= longest {
+			longest = len(run) + 1
+		}
+	}
+	delimiter := strings.Repeat("`", longest)
+	if longest > 1 {
+		value = " " + value + " "
+	}
+	return delimiter + value + delimiter
+}
+
 func renderList(node *nethtml.Node, state renderState, ordered bool) string {
 	var lines []string
 	index := 1
@@ -428,18 +452,73 @@ func renderList(node *nethtml.Node, state renderState, ordered bool) string {
 		if ordered {
 			prefix = fmt.Sprintf("%d. ", index)
 		}
-		lines = append(lines, prefix+strings.TrimSpace(renderInlineChildren(child, state)))
+		lines = append(lines, prefix+renderListItem(child, state))
 		index++
 	}
 	return strings.Join(lines, "\n")
+}
+
+func renderListItem(node *nethtml.Node, state renderState) string {
+	var inline strings.Builder
+	var nested []string
+	for child := node.FirstChild; child != nil; child = child.NextSibling {
+		if child.Type == nethtml.ElementNode && (child.Data == "ul" || child.Data == "ol") {
+			nestedText := renderList(child, state, child.Data == "ol")
+			for _, line := range strings.Split(nestedText, "\n") {
+				nested = append(nested, "  "+line)
+			}
+			continue
+		}
+		inline.WriteString(renderNode(child, state))
+	}
+	result := strings.TrimSpace(normalizeInline(inline.String()))
+	if len(nested) > 0 {
+		result += "\n" + strings.Join(nested, "\n")
+	}
+	return result
 }
 
 func normalizeInline(value string) string {
 	return strings.Join(strings.Fields(value), " ")
 }
 
+// SanitizeTerminalText removes control characters that can alter terminal output.
+func SanitizeTerminalText(value string) string {
+	return strings.Map(func(r rune) rune {
+		if r == '\n' || r == '\r' || r == '\t' {
+			return r
+		}
+		if r < 0x20 || r == 0x7f {
+			return -1
+		}
+		return r
+	}, value)
+}
+
+func escapeMarkdownText(value string) string {
+	value = SanitizeTerminalText(value)
+	return strings.NewReplacer("\\", "\\\\", "`", "\\`", "*", "\\*", "_", "\\_", "[", "\\[", "]", "\\]", "<", "\\<", ">", "\\>").Replace(value)
+}
+
+func safeLinkDestination(value string) string {
+	value = strings.TrimSpace(SanitizeTerminalText(value))
+	parsed, err := url.Parse(value)
+	if err != nil {
+		return ""
+	}
+	switch strings.ToLower(parsed.Scheme) {
+	case "", "http", "https", "mailto":
+	default:
+		return ""
+	}
+	if strings.ContainsAny(value, "\r\n()<>\"") {
+		return ""
+	}
+	return value
+}
+
 func fencedText(value string) string {
-	value = strings.TrimRight(value, "\n")
+	value = SanitizeTerminalText(strings.TrimRight(value, "\n"))
 	longest := 3
 	for _, run := range regexp.MustCompile("`+").FindAllString(value, -1) {
 		if len(run)+1 > longest {
@@ -451,28 +530,75 @@ func fencedText(value string) string {
 }
 
 func serializeHTML(node *nethtml.Node) string {
-	var buffer bytes.Buffer
-	if err := nethtml.Render(&buffer, node); err != nil {
-		return html.EscapeString(TextContent(node))
+	safe := cloneSafeHTML(node)
+	if safe == nil {
+		return escapeMarkdownText(TextContent(node))
 	}
-	return buffer.String()
+	var buffer bytes.Buffer
+	if err := nethtml.Render(&buffer, safe); err != nil {
+		return escapeMarkdownText(TextContent(node))
+	}
+	return SanitizeTerminalText(buffer.String())
+}
+
+// cloneSafeHTML copies a subtree while dropping active content, event handlers,
+// inline styles, and unsafe URI attributes. Unknown markup is preserved.
+func cloneSafeHTML(node *nethtml.Node) *nethtml.Node {
+	if node == nil {
+		return nil
+	}
+	if node.Type == nethtml.TextNode {
+		return &nethtml.Node{Type: nethtml.TextNode, Data: SanitizeTerminalText(node.Data)}
+	}
+	if node.Type != nethtml.ElementNode {
+		return nil
+	}
+	tag := strings.ToLower(node.Data)
+	if tag == "script" || tag == "style" || tag == "noscript" || tag == "iframe" || tag == "svg" {
+		return nil
+	}
+	safe := &nethtml.Node{Type: nethtml.ElementNode, Data: node.Data}
+	for _, attr := range node.Attr {
+		key := strings.ToLower(attr.Key)
+		if strings.HasPrefix(key, "on") || key == "style" || key == "srcdoc" {
+			continue
+		}
+		value := SanitizeTerminalText(attr.Val)
+		if key == "href" || key == "src" {
+			value = safeLinkDestination(value)
+			if value == "" {
+				continue
+			}
+		}
+		safe.Attr = append(safe.Attr, nethtml.Attribute{Key: attr.Key, Val: value})
+	}
+	for child := node.FirstChild; child != nil; child = child.NextSibling {
+		if cloned := cloneSafeHTML(child); cloned != nil {
+			safe.AppendChild(cloned)
+		}
+	}
+	return safe
 }
 
 func normalizeMarkdown(value string) string {
 	lines := strings.Split(strings.Trim(value, " \t\n"), "\n")
 	var output []string
 	blank := false
-	inFence := false
+	fenceLength := 0
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "```") {
-			inFence = !inFence
+		backticks := leadingBackticks(trimmed)
+		if fenceLength == 0 && backticks >= 3 {
+			fenceLength = backticks
 			blank = false
 			output = append(output, line)
 			continue
 		}
-		if inFence {
+		if fenceLength > 0 {
 			output = append(output, line)
+			if backticks >= fenceLength && strings.TrimSpace(trimmed[backticks:]) == "" {
+				fenceLength = 0
+			}
 			continue
 		}
 		line = strings.TrimRight(line, " \t")
@@ -487,6 +613,14 @@ func normalizeMarkdown(value string) string {
 		output = append(output, line)
 	}
 	return strings.TrimSpace(strings.Join(output, "\n")) + "\n"
+}
+
+func leadingBackticks(value string) int {
+	count := 0
+	for count < len(value) && value[count] == '`' {
+		count++
+	}
+	return count
 }
 
 // SortStrings returns a sorted copy without modifying the input slice.

@@ -15,6 +15,7 @@ var statementMarkdown = goldmark.New(goldmark.WithExtensions(extension.GFM))
 // The DOM renderer owns HTML-to-Markdown policy; preserving the source keeps
 // raw MathML and unknown HTML structures loss-minimizing for later consumers.
 func BuildMarkdown(source string) (string, error) {
+	source = SanitizeTerminalText(source)
 	if strings.TrimSpace(source) == "" {
 		return "", errors.New("generated Markdown is empty")
 	}

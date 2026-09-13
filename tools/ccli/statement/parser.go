@@ -149,6 +149,43 @@ func matchesURLPattern(u *url.URL, pattern URLPattern) bool {
 	return strings.HasPrefix(u.EscapedPath(), pattern.PathPrefix) || strings.HasPrefix(u.Path, pattern.PathPrefix)
 }
 
+const (
+	maxDocumentNodes = 250_000
+	maxDocumentDepth = 1024
+)
+
 func parseHTML(source string) (*nethtml.Node, error) {
-	return nethtml.Parse(strings.NewReader(source))
+	document, err := nethtml.Parse(strings.NewReader(source))
+	if err != nil {
+		return nil, err
+	}
+	if err := validateDocumentBounds(document); err != nil {
+		return nil, err
+	}
+	return document, nil
+}
+
+func validateDocumentBounds(root *nethtml.Node) error {
+	type frame struct {
+		node  *nethtml.Node
+		depth int
+	}
+	stack := []frame{{node: root}}
+	count := 0
+	for len(stack) > 0 {
+		last := len(stack) - 1
+		current := stack[last]
+		stack = stack[:last]
+		count++
+		if count > maxDocumentNodes {
+			return fmt.Errorf("document exceeds %d DOM nodes", maxDocumentNodes)
+		}
+		if current.depth > maxDocumentDepth {
+			return fmt.Errorf("document exceeds %d DOM depth", maxDocumentDepth)
+		}
+		for child := current.node.FirstChild; child != nil; child = child.NextSibling {
+			stack = append(stack, frame{node: child, depth: current.depth + 1})
+		}
+	}
+	return nil
 }

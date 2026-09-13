@@ -12,6 +12,8 @@ import (
 	"time"
 )
 
+const maxInventoryMetadataBytes = 1 << 20
+
 // ProblemRecord is the newest logical-problem summary emitted by inventory commands.
 type ProblemRecord struct {
 	Key           string    `json:"key" yaml:"key"`
@@ -55,11 +57,16 @@ func Scan(root string) ([]CaptureRecord, []error) {
 			}
 			return nil
 		}
+		if entry.Type()&os.ModeSymlink != 0 {
+			warnings = append(warnings, fmt.Errorf("skip symlink %s", path))
+			return nil
+		}
 		if entry.Name() != "problem.json" {
 			return nil
 		}
+
 		captureDir := filepath.Dir(path)
-		metadataBytes, err := os.ReadFile(path)
+		metadataBytes, err := readInventoryFile(path)
 		if err != nil {
 			warnings = append(warnings, fmt.Errorf("read %s: %w", path, err))
 			return nil
@@ -88,12 +95,12 @@ func Scan(root string) ([]CaptureRecord, []error) {
 		}
 		statementPath := filepath.Join(captureDir, "statement.md")
 		capturePath := filepath.Join(captureDir, "capture.json")
-		if _, err := os.Stat(statementPath); err != nil {
-			warnings = append(warnings, fmt.Errorf("missing statement for %s: %w", path, err))
+		if err := checkInventoryFile(statementPath); err != nil {
+			warnings = append(warnings, fmt.Errorf("invalid statement for %s: %w", path, err))
 			return nil
 		}
-		if _, err := os.Stat(capturePath); err != nil {
-			warnings = append(warnings, fmt.Errorf("missing capture for %s: %w", path, err))
+		if err := checkInventoryFile(capturePath); err != nil {
+			warnings = append(warnings, fmt.Errorf("invalid capture for %s: %w", path, err))
 			return nil
 		}
 		captureName := filepath.Base(captureDir)
@@ -124,6 +131,37 @@ func Scan(root string) ([]CaptureRecord, []error) {
 		warnings = append(warnings, err)
 	}
 	return records, warnings
+}
+
+func readInventoryFile(path string) ([]byte, error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return nil, err
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		return nil, errors.New("symlink is not allowed")
+	}
+	if !info.Mode().IsRegular() {
+		return nil, errors.New("not a regular file")
+	}
+	if info.Size() > maxInventoryMetadataBytes {
+		return nil, fmt.Errorf("file exceeds %d bytes", maxInventoryMetadataBytes)
+	}
+	return os.ReadFile(path)
+}
+
+func checkInventoryFile(path string) error {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return err
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		return errors.New("symlink is not allowed")
+	}
+	if !info.Mode().IsRegular() {
+		return errors.New("not a regular file")
+	}
+	return nil
 }
 
 // Summarize groups captures by logical key and selects the newest record per key.

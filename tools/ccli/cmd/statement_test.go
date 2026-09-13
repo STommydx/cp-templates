@@ -26,8 +26,9 @@ func TestStatementAPIContract(t *testing.T) {
 	}
 	router := chi.NewRouter()
 	api := humachi.New(router, huma.DefaultConfig("ccli statement server", "1.0.0"))
-	registerStatementAPI(api, root, []statement.Adapter{hkoi.New()}, "hkoi")
+	registerStatementAPI(api, root, []statement.Adapter{hkoi.New()}, "hkoi", make(chan struct{}, maxConcurrentCaptures))
 	server := httptest.NewServer(router)
+	defer server.Close()
 
 	html := `<html><body><div class="task"><div class="task-displayid">T-1</div><div class="task-info">Time limit: 1.000 s Memory limit: 256 MB</div><p>Neutral text.</p></div></body></html>`
 	body := []byte(`{"type":"statement-html","version":1,"capturedAt":"2026-09-13T00:00:00Z","title":"Neutral","url":"https://example.invalid/tasks/neutral","html":` + mustJSONForCommandTest(html) + `,"future":true}`)
@@ -52,6 +53,13 @@ func TestStatementAPIContract(t *testing.T) {
 	if !bytes.Equal(stored, body) {
 		t.Fatal("capture.json did not preserve request bytes")
 	}
+	exactBody := captureBodyOfSize(statement.MaxCaptureBytes)
+	exactResponse := doRequest(t, server.URL+"/", http.MethodPost, "application/json", exactBody)
+	if exactResponse.StatusCode != http.StatusCreated {
+		t.Fatalf("exact-size capture status=%d body=%s", exactResponse.StatusCode, readBody(exactResponse))
+	}
+	exactResponse.Body.Close()
+	invalidURLBody := bytes.Replace(body, []byte("https://example.invalid/tasks/neutral"), []byte("mailto:local@example.invalid"), 1)
 
 	checks := []struct {
 		name        string
@@ -66,6 +74,7 @@ func TestStatementAPIContract(t *testing.T) {
 		{name: "content type", method: http.MethodPost, path: "/", contentType: "text/plain", body: []byte("{}"), status: http.StatusUnsupportedMediaType},
 		{name: "wrong path", method: http.MethodPost, path: "/other", contentType: "application/json", body: body, status: http.StatusNotFound},
 		{name: "oversize", method: http.MethodPost, path: "/", contentType: "application/json", body: bytes.Repeat([]byte{'x'}, statement.MaxCaptureBytes+1), status: http.StatusRequestEntityTooLarge},
+		{name: "semantic url", method: http.MethodPost, path: "/", contentType: "application/json", body: invalidURLBody, status: http.StatusUnprocessableEntity},
 	}
 	for _, check := range checks {
 		t.Run(check.name, func(t *testing.T) {
@@ -146,6 +155,11 @@ func readBody(response *http.Response) string {
 func mustJSONForCommandTest(value string) string {
 	encoded, _ := json.Marshal(value)
 	return string(encoded)
+}
+func captureBodyOfSize(size int) []byte {
+	prefix := []byte(`{"type":"statement-html","version":1,"capturedAt":"2026-09-13T00:00:00Z","title":"Exact","url":"https://example.invalid/exact","html":"`)
+	suffix := []byte(`"}`)
+	return append(append(prefix, []byte(strings.Repeat("x", size-len(prefix)-len(suffix)))...), suffix...)
 }
 func TestRenderStatementMarkdown(t *testing.T) {
 	raw := "# Neutral title\n\nA **bold** statement."
