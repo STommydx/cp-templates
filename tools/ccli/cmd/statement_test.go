@@ -8,14 +8,15 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
-	huma "github.com/danielgtaylor/huma/v2"
-	"github.com/danielgtaylor/huma/v2/adapters/humago"
-
 	"github.com/STommydx/cp-templates/tools/ccli/statement"
 	"github.com/STommydx/cp-templates/tools/ccli/statement/adapters/hkoi"
+	huma "github.com/danielgtaylor/huma/v2"
+	"github.com/danielgtaylor/huma/v2/adapters/humachi"
+	"github.com/go-chi/chi/v5"
 )
 
 func TestStatementAPIContract(t *testing.T) {
@@ -23,11 +24,10 @@ func TestStatementAPIContract(t *testing.T) {
 	if err := statement.EnsureRoot(root); err != nil {
 		t.Fatal(err)
 	}
-	mux := http.NewServeMux()
-	api := humago.New(mux, huma.DefaultConfig("ccli statement server", "1.0.0"))
+	router := chi.NewRouter()
+	api := humachi.New(router, huma.DefaultConfig("ccli statement server", "1.0.0"))
 	registerStatementAPI(api, root, []statement.Adapter{hkoi.New()}, "hkoi")
-	server := httptest.NewServer(statementServerHandler{next: mux})
-	defer server.Close()
+	server := httptest.NewServer(router)
 
 	html := `<html><body><div class="task"><div class="task-displayid">T-1</div><div class="task-info">Time limit: 1.000 s Memory limit: 256 MB</div><p>Neutral text.</p></div></body></html>`
 	body := []byte(`{"type":"statement-html","version":1,"capturedAt":"2026-09-13T00:00:00Z","title":"Neutral","url":"https://example.invalid/tasks/neutral","html":` + mustJSONForCommandTest(html) + `,"future":true}`)
@@ -100,6 +100,16 @@ func TestStatementAPIContract(t *testing.T) {
 	}
 	if _, ok := spec.Paths["/health"]["get"].Responses["204"]; !ok {
 		t.Error("OpenAPI missing health 204 response")
+	}
+}
+func TestCaptureModelValidationUsesHumaTags(t *testing.T) {
+	validator := huma.NewModelValidator()
+	var value any
+	if err := json.Unmarshal([]byte(`{"type":"wrong","version":2,"capturedAt":"not-a-date","title":"","url":"relative","html":""}`), &value); err != nil {
+		t.Fatal(err)
+	}
+	if errs := validator.Validate(reflect.TypeOf(statement.CaptureEnvelope{}), value); len(errs) == 0 {
+		t.Fatal("Huma model validation accepted invalid capture fields")
 	}
 }
 

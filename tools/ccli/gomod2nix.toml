@@ -85,6 +85,10 @@ schema = 3
     version = 'v1.19.0'
     hash = 'sha256-YgMm1nid8yigNLG6aHfuMbsvMI1UYVf/Rkg44pp/NTU='
 
+  [mod.'github.com/go-chi/chi/v5']
+    version = 'v5.3.1'
+    hash = 'sha256-OaGcE3d9w3Yq0ThDxG8YNvpwAQgaTsKqOL6ofZIXAB4='
+
   [mod.'github.com/go-git/gcfg']
     version = 'v1.5.1-0.20230307220236-3a3c6141e376'
     hash = 'sha256-f4k0gSYuo0/q3WOoTxl2eFaj7WZpdz29ih6CKc8Ude8='

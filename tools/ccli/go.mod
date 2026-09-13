@@ -7,6 +7,7 @@ require (
 	github.com/charmbracelet/glamour v1.0.0
 	github.com/danielgtaylor/huma/v2 v2.39.1
 	github.com/fatih/color v1.19.0
+	github.com/go-chi/chi/v5 v5.3.1
 	github.com/go-git/go-git/v5 v5.19.2
 	github.com/mattn/go-isatty v0.0.24
 	github.com/pkg/errors v0.9.1

@@ -34,8 +34,8 @@ func (e *CaptureValidationError) Unwrap() error { return e.Err }
 
 // CaptureEnvelope is the versioned wire payload sent by PageMole.
 type CaptureEnvelope struct {
-	Type       string   `json:"type" required:"true" enum:"statement-html" doc:"Capture payload type"`
-	Version    int      `json:"version" required:"true" minimum:"1" maximum:"1" doc:"Capture payload version"`
+	Type       string   `json:"type" required:"true" const:"statement-html" doc:"Capture payload type"`
+	Version    int      `json:"version" required:"true" const:"1" doc:"Capture payload version"`
 	CapturedAt string   `json:"capturedAt" required:"true" format:"date-time" doc:"Browser capture time"`
 	Title      string   `json:"title" required:"true" doc:"Browser document title"`
 	URL        string   `json:"url" required:"true" minLength:"1" format:"uri" doc:"Rendered page URL"`
@@ -73,6 +73,41 @@ func (c *CaptureEnvelope) ParsedURL() (*url.URL, error) {
 	return u, nil
 }
 
+// WithRawBytes returns a value carrying the exact original request bytes.
+// Huma supplies the typed fields; its RawBody field supplies these bytes.
+func (c CaptureEnvelope) WithRawBytes(body []byte) CaptureEnvelope {
+	c.raw = bytes.Clone(body)
+	return c
+}
+
+// ValidateCapture checks semantic envelope constraints after JSON decoding.
+// Wire-shape validation remains Huma's responsibility for HTTP requests.
+func ValidateCapture(capture *CaptureEnvelope) error {
+	if capture == nil {
+		return &CaptureValidationError{Kind: ValidationSchema, Err: errors.New("capture is nil")}
+	}
+	if capture.Type != "statement-html" {
+		return &CaptureValidationError{Kind: ValidationSchema, Err: fmt.Errorf("unsupported capture type %q", capture.Type)}
+	}
+	if capture.Version != 1 {
+		return &CaptureValidationError{Kind: ValidationSchema, Err: fmt.Errorf("unsupported capture version %d", capture.Version)}
+	}
+	if capture.HTML == "" {
+		return &CaptureValidationError{Kind: ValidationSchema, Err: errors.New("capture html must not be empty")}
+	}
+	if _, err := capture.CaptureTime(); err != nil {
+		return &CaptureValidationError{Kind: ValidationSchema, Err: fmt.Errorf("invalid capturedAt: %w", err)}
+	}
+	u, err := capture.ParsedURL()
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		if err == nil {
+			err = errors.New("URL must be absolute")
+		}
+		return &CaptureValidationError{Kind: ValidationSchema, Err: fmt.Errorf("invalid url: %w", err)}
+	}
+	return nil
+}
+
 // DecodeCapture validates one PageMole body and retains its exact bytes.
 func DecodeCapture(body []byte) (*CaptureEnvelope, error) {
 	if len(body) > MaxCaptureBytes {
@@ -98,24 +133,8 @@ func DecodeCapture(body []byte) (*CaptureEnvelope, error) {
 			return nil, &CaptureValidationError{Kind: ValidationSchema, Err: fmt.Errorf("capture field %q is required", field)}
 		}
 	}
-	if capture.Type != "statement-html" {
-		return nil, &CaptureValidationError{Kind: ValidationSchema, Err: fmt.Errorf("unsupported capture type %q", capture.Type)}
-	}
-	if capture.Version != 1 {
-		return nil, &CaptureValidationError{Kind: ValidationSchema, Err: fmt.Errorf("unsupported capture version %d", capture.Version)}
-	}
-	if capture.HTML == "" {
-		return nil, &CaptureValidationError{Kind: ValidationSchema, Err: errors.New("capture html must not be empty")}
-	}
-	if _, err := capture.CaptureTime(); err != nil {
-		return nil, &CaptureValidationError{Kind: ValidationSchema, Err: fmt.Errorf("invalid capturedAt: %w", err)}
-	}
-	u, err := capture.ParsedURL()
-	if err != nil || u.Scheme == "" || u.Host == "" {
-		if err == nil {
-			err = errors.New("URL must be absolute")
-		}
-		return nil, &CaptureValidationError{Kind: ValidationSchema, Err: fmt.Errorf("invalid url: %w", err)}
+	if err := ValidateCapture(&capture); err != nil {
+		return nil, err
 	}
 	capture.raw = bytes.Clone(body)
 	return &capture, nil

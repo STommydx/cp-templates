@@ -1,25 +1,23 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"mime"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"syscall"
 	"time"
 
 	"github.com/charmbracelet/glamour"
 	huma "github.com/danielgtaylor/huma/v2"
-	"github.com/danielgtaylor/huma/v2/adapters/humago"
+	"github.com/danielgtaylor/huma/v2/adapters/humachi"
+	"github.com/go-chi/chi/v5"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
@@ -93,7 +91,8 @@ var statementShowCmd = &cobra.Command{
 }
 
 type captureInput struct {
-	Body statement.CaptureEnvelope
+	Body    statement.CaptureEnvelope
+	RawBody []byte
 }
 
 type captureResponse struct {
@@ -106,39 +105,6 @@ type captureResponse struct {
 }
 type captureOutput struct {
 	Body captureResponse
-}
-
-type rawBodyContextKey struct{}
-
-type statementServerHandler struct {
-	next http.Handler
-}
-
-func (h statementServerHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	if request.Method == http.MethodPost {
-		if request.URL.Path != "/" {
-			http.NotFound(writer, request)
-			return
-		}
-		mediaType, _, err := mime.ParseMediaType(request.Header.Get("Content-Type"))
-		if err != nil || !strings.EqualFold(mediaType, "application/json") {
-			http.Error(writer, "unsupported content type", http.StatusUnsupportedMediaType)
-			return
-		}
-		body, err := io.ReadAll(io.LimitReader(request.Body, statement.MaxCaptureBytes+1))
-		if err != nil {
-			http.Error(writer, "could not read request body", http.StatusBadRequest)
-			return
-		}
-		if len(body) > statement.MaxCaptureBytes {
-			http.Error(writer, "request body exceeds 8 MiB", http.StatusRequestEntityTooLarge)
-			return
-		}
-		_ = request.Body.Close()
-		request.Body = io.NopCloser(bytes.NewReader(body))
-		request = request.WithContext(context.WithValue(request.Context(), rawBodyContextKey{}, body))
-	}
-	h.next.ServeHTTP(writer, request)
 }
 
 func runStatementServer(cmd *cobra.Command) error {
@@ -160,12 +126,12 @@ func runStatementServer(cmd *cobra.Command) error {
 		return fmt.Errorf("clean statement staging: %w", err)
 	}
 
-	mux := http.NewServeMux()
-	api := humago.New(mux, huma.DefaultConfig("ccli statement server", "1.0.0"))
+	router := chi.NewRouter()
+	api := humachi.New(router, huma.DefaultConfig("ccli statement server", "1.0.0"))
 	registerStatementAPI(api, root, adapters, statementAdapter)
 	server := &http.Server{
 		Addr:              fmt.Sprintf("127.0.0.1:%d", statementPort),
-		Handler:           statementServerHandler{next: mux},
+		Handler:           router,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 	return serveUntilSignal(server)
@@ -194,29 +160,14 @@ func registerStatementAPI(api huma.API, root string, adapters []statement.Adapte
 		DefaultStatus: http.StatusCreated,
 		MaxBodyBytes:  statement.MaxCaptureBytes,
 		Errors:        []int{http.StatusBadRequest, http.StatusRequestEntityTooLarge, http.StatusUnsupportedMediaType, http.StatusUnprocessableEntity, http.StatusInternalServerError},
-	}, func(ctx context.Context, input *captureInput) (*captureOutput, error) {
-		raw, _ := ctx.Value(rawBodyContextKey{}).([]byte)
-		if len(raw) == 0 {
-			var err error
-			raw, err = json.Marshal(input.Body)
-			if err != nil {
-				return nil, huma.Error400BadRequest("could not read capture body", err)
-			}
-		}
-		capture, err := statement.DecodeCapture(raw)
-		if err != nil {
-			var validationErr *statement.CaptureValidationError
-			if errors.As(err, &validationErr) && validationErr.Kind == statement.ValidationMalformed {
-				return nil, huma.Error400BadRequest("malformed capture JSON", err)
-			}
-			return nil, huma.Error422UnprocessableEntity("invalid capture envelope", err)
-		}
-		result, err := statement.ParseCapture(capture, adapters, statement.ParseOptions{ForcedAdapterID: forcedAdapter})
+	}, func(_ context.Context, input *captureInput) (*captureOutput, error) {
+		capture := input.Body.WithRawBytes(input.RawBody)
+		result, err := statement.ParseCapture(&capture, adapters, statement.ParseOptions{ForcedAdapterID: forcedAdapter})
 		if err != nil {
 			return nil, huma.Error500InternalServerError("could not parse capture", err)
 		}
 		receivedAt := time.Now().UTC()
-		directory, err := statement.StoreCapture(root, capture, result, receivedAt)
+		directory, err := statement.StoreCapture(root, &capture, result, receivedAt)
 		if err != nil {
 			return nil, huma.Error500InternalServerError("could not store capture", err)
 		}
