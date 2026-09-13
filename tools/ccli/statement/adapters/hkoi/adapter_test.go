@@ -3,6 +3,7 @@ package hkoi_test
 import (
 	"encoding/json"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -15,23 +16,24 @@ func TestAdapterIdentityAndURLPatterns(t *testing.T) {
 	if adapter.ID() != "hkoi" {
 		t.Fatalf("unexpected adapter id: %q", adapter.ID())
 	}
-	patterns := adapter.URLPatterns()
-	if len(patterns) != 1 || patterns[0].Host == "" || patterns[0].PathPrefix == "" {
-		t.Fatalf("unexpected URL patterns: %#v", patterns)
+	// The published mapping selects real captures, so it is asserted literally.
+	want := []statement.URLPattern{{Host: "judge.hkoi.org", PathPrefix: "/task/"}}
+	if !slices.Equal(adapter.URLPatterns(), want) {
+		t.Fatalf("URL patterns = %#v, want %#v", adapter.URLPatterns(), want)
 	}
 }
 
 // TestURLSelectionUsesAdapterPatterns proves the adapter only claims its own pages.
 func TestURLSelectionUsesAdapterPatterns(t *testing.T) {
-	pattern := hkoi.New().URLPatterns()[0]
 	html := string(mustRead(t, "testdata/lantern.html"))
 	for _, check := range []struct {
 		name     string
 		url      string
 		wantMode string
 	}{
-		{name: "matching host and prefix", url: "https://" + pattern.Host + pattern.PathPrefix + "UDEV", wantMode: "task-page"},
-		{name: "unrelated host", url: "https://example.invalid" + pattern.PathPrefix + "UDEV", wantMode: "fallback"},
+		{name: "matching host and prefix", url: "https://judge.hkoi.org/task/UDEV", wantMode: "task-page"},
+		{name: "matching host without the statement prefix", url: "https://judge.hkoi.org/schooladmin/hosted/UDEV", wantMode: "fallback"},
+		{name: "unrelated host", url: "https://example.invalid/task/UDEV", wantMode: "fallback"},
 	} {
 		t.Run(check.name, func(t *testing.T) {
 			result := parse(t, captureBody(t, check.url, html), statement.ParseOptions{})
@@ -45,8 +47,7 @@ func TestURLSelectionUsesAdapterPatterns(t *testing.T) {
 // TestStructuralMatchFailureFallsBack proves a matching URL with an unexpected
 // body uses the fallback namespace instead of parsing the wrong structure.
 func TestStructuralMatchFailureFallsBack(t *testing.T) {
-	pattern := hkoi.New().URLPatterns()[0]
-	result := parse(t, captureBody(t, "https://"+pattern.Host+pattern.PathPrefix+"NOEX", `<html><body><p>plain page</p></body></html>`), statement.ParseOptions{})
+	result := parse(t, captureBody(t, "https://judge.hkoi.org/task/NOEX", `<html><body><p>plain page</p></body></html>`), statement.ParseOptions{})
 
 	if result.Mode != "fallback" || result.Metadata.Source.Adapter != statement.FallbackAdapterID {
 		t.Fatalf("unexpected fallback: mode=%s adapter=%s", result.Mode, result.Metadata.Source.Adapter)

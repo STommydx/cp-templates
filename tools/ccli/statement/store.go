@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/adrg/xdg"
 )
@@ -90,9 +91,6 @@ func StoreCapture(root string, capture *CaptureEnvelope, result ParseResult, rec
 	if err := os.MkdirAll(parent, 0o700); err != nil {
 		return "", err
 	}
-	if err := os.Chmod(parent, 0o700); err != nil {
-		return "", err
-	}
 	stamp := receivedAt.UTC().Format(receiptLayout)
 
 	stagingRoot := filepath.Join(root, ".staging")
@@ -104,9 +102,6 @@ func StoreCapture(root string, capture *CaptureEnvelope, result ParseResult, rec
 		return "", err
 	}
 	defer os.RemoveAll(stage)
-	if err := os.Chmod(stage, 0o700); err != nil {
-		return "", err
-	}
 
 	raw := capture.RawBytes()
 	if len(raw) == 0 {
@@ -139,7 +134,7 @@ func StoreCapture(root string, capture *CaptureEnvelope, result ParseResult, rec
 		"statement.md": []byte(result.Markdown),
 	}
 	for name, content := range files {
-		if err := writePrivateFile(filepath.Join(stage, name), content); err != nil {
+		if err := os.WriteFile(filepath.Join(stage, name), content, 0o600); err != nil {
 			return "", err
 		}
 	}
@@ -163,18 +158,6 @@ func StoreCapture(root string, capture *CaptureEnvelope, result ParseResult, rec
 		}
 		// A collision leaves the stage intact for the next suffix.
 	}
-}
-
-func writePrivateFile(path string, content []byte) error {
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
-	if err != nil {
-		return err
-	}
-	if _, err := file.Write(content); err != nil {
-		_ = file.Close()
-		return err
-	}
-	return file.Close()
 }
 
 func urlHash(rawURL string) string {
@@ -201,17 +184,31 @@ func parseURL(rawURL string) (*url.URL, error) {
 	return url.Parse(rawURL)
 }
 
-func safeComponent(value string) string {
+// fileComponent keeps the filename-safe ASCII characters of a value and folds
+// every other run into a single dash.
+func fileComponent(value string, lowered bool) string {
 	var builder strings.Builder
+	dash := false
 	for _, runeValue := range value {
-		allowed := (runeValue >= 'a' && runeValue <= 'z') || (runeValue >= 'A' && runeValue <= 'Z') || (runeValue >= '0' && runeValue <= '9') || runeValue == '.' || runeValue == '_' || runeValue == '-'
-		if allowed {
+		if lowered {
+			runeValue = unicode.ToLower(runeValue)
+		}
+		if (runeValue >= 'a' && runeValue <= 'z') || (runeValue >= 'A' && runeValue <= 'Z') || (runeValue >= '0' && runeValue <= '9') || runeValue == '.' || runeValue == '_' || runeValue == '-' {
 			builder.WriteRune(runeValue)
-		} else if builder.Len() > 0 && !strings.HasSuffix(builder.String(), "-") {
+			dash = runeValue == '-'
+			continue
+		}
+		if builder.Len() > 0 && !dash {
 			builder.WriteByte('-')
+			dash = true
 		}
 	}
-	component := strings.Trim(builder.String(), ".-")
+	return strings.Trim(builder.String(), ".-")
+}
+
+// safeComponent bounds a problem code to one path component.
+func safeComponent(value string) string {
+	component := fileComponent(value, false)
 	if len(component) <= 80 {
 		return component
 	}
@@ -221,27 +218,6 @@ func safeComponent(value string) string {
 }
 
 func slugify(value string) string {
-	value = strings.ToLower(strings.TrimSpace(value))
-	var builder strings.Builder
-	lastDash := false
-	for _, runeValue := range value {
-		allowed := (runeValue >= 'a' && runeValue <= 'z') || (runeValue >= '0' && runeValue <= '9') || runeValue == '.' || runeValue == '_' || runeValue == '-'
-		if allowed {
-			builder.WriteRune(runeValue)
-			lastDash = runeValue == '-'
-			continue
-		}
-		if !lastDash && builder.Len() > 0 {
-			builder.WriteByte('-')
-			lastDash = true
-		}
-	}
-	return strings.Trim(strings.TrimSuffix(builder.String(), "-"), ".")[:min(80, len(strings.Trim(strings.TrimSuffix(builder.String(), "-"), ".")))]
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
+	component := fileComponent(strings.TrimSpace(value), true)
+	return component[:min(80, len(component))]
 }

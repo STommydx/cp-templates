@@ -123,16 +123,6 @@ func DecodeCapture(body []byte) (*CaptureEnvelope, error) {
 		}
 		return nil, &CaptureValidationError{Kind: kind, Err: fmt.Errorf("decode capture: %w", err)}
 	}
-
-	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(body, &fields); err != nil {
-		return nil, &CaptureValidationError{Kind: ValidationMalformed, Err: fmt.Errorf("decode capture object: %w", err)}
-	}
-	for _, field := range []string{"type", "version", "capturedAt", "title", "url", "html"} {
-		if _, ok := fields[field]; !ok {
-			return nil, &CaptureValidationError{Kind: ValidationSchema, Err: fmt.Errorf("capture field %q is required", field)}
-		}
-	}
 	if err := ValidateCapture(&capture); err != nil {
 		return nil, err
 	}

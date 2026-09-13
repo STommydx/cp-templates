@@ -40,16 +40,7 @@ The receiver preserves the request body and returns a successful HTTP status aft
 
 ## Output
 
-`ccli statement serve` stores durable data under the XDG data directory:
-
-```text
-<ccli-data>/statements/<adapter>/<code-or-urlhash>-<slug>/<receipt-timestamp>/
-    capture.json
-    problem.json
-    statement.md
-```
-
-See [`../ccli/README.md`](../ccli/README.md) for the API, storage, and inventory contracts.
+`ccli statement serve` stores durable data under the XDG data directory. Each capture gets its own `<adapter>/<code-or-urlhash>-<slug>/<receipt-timestamp>/` directory; the artifact layout, permissions, retention, and inventory rules are part of the receiver contract in [`../ccli/README.md`](../ccli/README.md), which is the single source for that tree.
 
 ## Scope
 

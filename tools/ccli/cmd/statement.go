@@ -44,8 +44,6 @@ var (
 // defaultStatementWidth is the wrapping width when the terminal size is unknown.
 const defaultStatementWidth = 80
 
-const maxConcurrentCaptures = 4
-
 var statementCmd = &cobra.Command{
 	Use:   "statement",
 	Short: "Capture and inspect problem statements",
@@ -163,8 +161,7 @@ func runStatementServer(cmd *cobra.Command) error {
 	router := chi.NewRouter()
 	router.Use(httplog.RequestLogger(slog.New(logger), &httplog.Options{Level: requestLogLevel(logger)}))
 	api := humachi.New(router, huma.DefaultConfig("ccli statement server", "1.0.0"))
-	captureSlots := make(chan struct{}, maxConcurrentCaptures)
-	registerStatementAPI(api, root, adapters, statementAdapter, captureSlots, logger)
+	registerStatementAPI(api, root, adapters, statementAdapter, logger)
 	server := &http.Server{
 		Addr:              fmt.Sprintf("127.0.0.1:%d", statementPort),
 		Handler:           router,
@@ -217,25 +214,17 @@ func findStatementAdapter(adapters []statement.Adapter, id string) statement.Ada
 	return nil
 }
 
-func registerStatementAPI(api huma.API, root string, adapters []statement.Adapter, forcedAdapter string, captureSlots chan struct{}, logger *log.Logger) {
+func registerStatementAPI(api huma.API, root string, adapters []statement.Adapter, forcedAdapter string, logger *log.Logger) {
 	huma.Register[captureInput, captureOutput](api, huma.Operation{
 		OperationID:   "capture-statement-html",
 		Method:        http.MethodPost,
 		Path:          "/",
 		Summary:       "Capture rendered PageMole statement HTML",
-		Description:   "Accept a PageMole statement-html version 1 envelope and persist immutable raw, metadata, and Markdown artifacts.",
+		Description:   "Accept a PageMole statement-html version 1 envelope and persist immutable raw, metadata, and Markdown artifacts. Captures are JSON: the generated octet-stream request body describes the raw-byte capture field and is rejected with 415.",
 		DefaultStatus: http.StatusCreated,
 		MaxBodyBytes:  statement.MaxCaptureBytes + 1,
-		Errors:        []int{http.StatusBadRequest, http.StatusRequestEntityTooLarge, http.StatusUnsupportedMediaType, http.StatusUnprocessableEntity, http.StatusInternalServerError, http.StatusServiceUnavailable},
+		Errors:        []int{http.StatusBadRequest, http.StatusRequestEntityTooLarge, http.StatusUnsupportedMediaType, http.StatusUnprocessableEntity, http.StatusInternalServerError},
 	}, func(ctx context.Context, input *captureInput) (*captureOutput, error) {
-		if captureSlots != nil {
-			select {
-			case captureSlots <- struct{}{}:
-				defer func() { <-captureSlots }()
-			case <-ctx.Done():
-				return nil, huma.Error503ServiceUnavailable("capture processing capacity is unavailable")
-			}
-		}
 		capture := input.Body.WithRawBytes(input.RawBody)
 		result, err := statement.ParseCapture(&capture, adapters, statement.ParseOptions{ForcedAdapterID: forcedAdapter})
 		if err != nil {
@@ -271,26 +260,22 @@ func registerStatementAPI(api huma.API, root string, adapters []statement.Adapte
 }
 
 func serveUntilSignal(server *http.Server) error {
+	signals, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 	serverErrors := make(chan error, 1)
 	go func() {
 		serverErrors <- server.ListenAndServe()
 	}()
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
-	defer signal.Stop(signals)
 	select {
 	case err := <-serverErrors:
 		if errors.Is(err, http.ErrServerClosed) {
 			return nil
 		}
 		return err
-	case <-signals:
+	case <-signals.Done():
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		if err := server.Shutdown(ctx); err != nil {
-			return err
-		}
-		return nil
+		return server.Shutdown(ctx)
 	}
 }
 

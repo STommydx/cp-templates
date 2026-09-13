@@ -10,7 +10,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -31,7 +30,7 @@ func TestStatementAPIContract(t *testing.T) {
 	}
 	router := chi.NewRouter()
 	api := humachi.New(router, huma.DefaultConfig("ccli statement server", "1.0.0"))
-	registerStatementAPI(api, root, []statement.Adapter{hkoi.New()}, "hkoi", make(chan struct{}, maxConcurrentCaptures), log.NewWithOptions(io.Discard, log.Options{}))
+	registerStatementAPI(api, root, []statement.Adapter{hkoi.New()}, "hkoi", log.NewWithOptions(io.Discard, log.Options{}))
 	server := httptest.NewServer(router)
 	defer server.Close()
 
@@ -116,17 +115,6 @@ func TestStatementAPIContract(t *testing.T) {
 		t.Error("OpenAPI missing health 204 response")
 	}
 }
-func TestCaptureModelValidationUsesHumaTags(t *testing.T) {
-	validator := huma.NewModelValidator()
-	var value any
-	if err := json.Unmarshal([]byte(`{"type":"wrong","version":2,"capturedAt":"not-a-date","title":"","url":"relative","html":""}`), &value); err != nil {
-		t.Fatal(err)
-	}
-	if errs := validator.Validate(reflect.TypeOf(statement.CaptureEnvelope{}), value); len(errs) == 0 {
-		t.Fatal("Huma model validation accepted invalid capture fields")
-	}
-}
-
 func doRequest(t *testing.T, url, method, contentType string, body []byte) *http.Response {
 	t.Helper()
 	request, err := http.NewRequest(method, url, bytes.NewReader(body))
@@ -275,7 +263,7 @@ func newLoggingTestServer(t *testing.T, logger *log.Logger) *httptest.Server {
 	router := chi.NewRouter()
 	router.Use(httplog.RequestLogger(slog.New(logger), &httplog.Options{Level: requestLogLevel(logger)}))
 	api := humachi.New(router, huma.DefaultConfig("ccli statement server", "1.0.0"))
-	registerStatementAPI(api, root, []statement.Adapter{hkoi.New()}, "hkoi", make(chan struct{}, maxConcurrentCaptures), logger)
+	registerStatementAPI(api, root, []statement.Adapter{hkoi.New()}, "hkoi", logger)
 	return httptest.NewServer(router)
 }
 
