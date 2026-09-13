@@ -70,11 +70,12 @@ func (Adapter) Extract(capture *statement.CaptureEnvelope, document *nethtml.Nod
 		metadata.Samples = extracted.Samples
 	}
 	return statement.Extraction{
-		Root:     root,
-		Samples:  metadata.Samples,
-		Metadata: metadata,
-		Excluded: extracted.Excluded,
-		Warnings: warnings,
+		Root:          root,
+		Samples:       metadata.Samples,
+		SamplesAnchor: extracted.Anchor,
+		Metadata:      metadata,
+		Excluded:      extracted.Excluded,
+		Warnings:      warnings,
 	}, nil
 }
 

@@ -49,11 +49,11 @@ A URL match with no `.task` root falls through to the parser's `unknown` fallbac
 | `.samples-wrapper` table with `Input` and `Output` headers | Ordered structured samples |
 | Numeric sample row with two `.io` cells | Input/output pair |
 | Valid `data-raw` on input cell | Exact decoded input bytes |
-| Explanation row after a sample row | Explanation attached to that sample |
+| Explanation row after a sample row | Explanation attached to that sample, taken from its `.explanation` content cell rather than the leading label cell |
 
-The adapter selects the first table whose headers contain both `Input` and `Output`. Subtask and score tables are not sample tables. Run controls are ignored. The sample wrapper is excluded from normal rendering only after all data and explanation rows are handled; otherwise the table remains visible and a warning is recorded.
+The adapter selects the first table whose headers contain both `Input` and `Output`. Subtask and score tables are not sample tables. Run controls are ignored. The sample wrapper is excluded from normal rendering only after all data and explanation rows are handled; otherwise the table remains visible and a warning is recorded. The rendered sample section replaces the wrapper in place, so samples stay under the section that introduced them.
 
-The shared renderer preserves headings, lists, code blocks, links, images, tables, MathML, details, blockquotes, and unknown structures. The adapter does not produce Markdown or write files.
+The shared renderer preserves headings, lists, code blocks, links, images, MathML, details, blockquotes, and unknown structures, and converts simple uniform tables into Markdown tables; a table that would lose cells or formatting stays as HTML. The adapter does not produce Markdown or write files.
 
 Execution metadata is populated only when the rendered page states an explicit value. Missing values remain absent.
 

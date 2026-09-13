@@ -108,6 +108,7 @@ func FindTags(root *nethtml.Node, tag string) []*nethtml.Node {
 
 type sampleTableResult struct {
 	Samples  []Sample
+	Anchor   *nethtml.Node
 	Excluded []*nethtml.Node
 	Found    bool
 	Complete bool
@@ -155,10 +156,13 @@ func ExtractSampleTable(root *nethtml.Node) sampleTableResult {
 			current = &result.Samples[len(result.Samples)-1]
 			continue
 		}
-		if current != nil && meaningfulExplanation(row) {
-			if current.Explanation == nil {
+		if meaningfulExplanation(row) {
+			switch {
+			case current == nil:
+				allRowsHandled = false
+			case current.Explanation == nil:
 				current.Explanation = explanationNode(row)
-			} else {
+			default:
 				allRowsHandled = false
 			}
 			continue
@@ -171,11 +175,11 @@ func ExtractSampleTable(root *nethtml.Node) sampleTableResult {
 	if !result.Complete {
 		return result
 	}
+	result.Anchor = candidate
 	if wrapper := nearestAncestor(candidate, "samples-wrapper", root); wrapper != nil {
-		result.Excluded = []*nethtml.Node{wrapper}
-	} else {
-		result.Excluded = []*nethtml.Node{candidate}
+		result.Anchor = wrapper
 	}
+	result.Excluded = []*nethtml.Node{result.Anchor}
 	return result
 }
 
@@ -240,10 +244,15 @@ func sampleCellValue(cell *nethtml.Node, decodeRaw bool) (string, bool) {
 }
 
 func meaningfulExplanation(row *nethtml.Node) bool {
-	if isTableControl(row) || !rowHasVisibleText(row) {
+	if isTableControl(row) {
 		return false
 	}
-	return true
+	for _, cell := range directCells(row) {
+		if hasContentElement(cell) {
+			return true
+		}
+	}
+	return rowHasVisibleText(row)
 }
 
 func isTableControl(row *nethtml.Node) bool {
@@ -265,12 +274,43 @@ func rowHasVisibleText(row *nethtml.Node) bool {
 	return strings.TrimSpace(TextContent(row)) != ""
 }
 
+// explanationNode returns the subtree the renderer emits for one explanation row.
+// Sources render a label cell before the cell that carries the explanation content.
 func explanationNode(row *nethtml.Node) *nethtml.Node {
 	cells := directCells(row)
+	for _, cell := range cells {
+		if HasClass(cell, "explanation") {
+			return cell
+		}
+	}
+	for _, cell := range cells {
+		if hasContentElement(cell) {
+			return cell
+		}
+	}
 	if len(cells) > 0 {
 		return cells[0]
 	}
 	return row
+}
+
+// hasContentElement reports whether a subtree carries an element that renders as content on its own.
+func hasContentElement(root *nethtml.Node) bool {
+	found := false
+	Walk(root, func(node *nethtml.Node) bool {
+		if found {
+			return false
+		}
+		if node.Type != nethtml.ElementNode {
+			return true
+		}
+		switch strings.ToLower(node.Data) {
+		case "img", "math", "svg", "pre", "table", "blockquote", "details", "figure":
+			found = true
+		}
+		return !found
+	})
+	return found
 }
 
 func hasClassAncestor(node *nethtml.Node, className string) bool {
@@ -292,7 +332,8 @@ func nearestAncestor(node *nethtml.Node, className string, stop *nethtml.Node) *
 }
 
 // RenderMarkdown builds a readable statement and validates its Markdown AST with Goldmark.
-func RenderMarkdown(title, sourceURL string, capturedAt string, root *nethtml.Node, excluded []*nethtml.Node, samples []Sample, fallback bool) (string, error) {
+// When samplesAnchor is a descendant of root, the sample section replaces that node.
+func RenderMarkdown(title, sourceURL string, capturedAt string, root *nethtml.Node, samplesAnchor *nethtml.Node, excluded []*nethtml.Node, samples []Sample, fallback bool) (string, error) {
 	var builder strings.Builder
 	builder.WriteString("# ")
 	builder.WriteString(escapeMarkdownText(strings.TrimSpace(title)))
@@ -304,9 +345,29 @@ func RenderMarkdown(title, sourceURL string, capturedAt string, root *nethtml.No
 	if fallback {
 		builder.WriteString("<!-- fallback: task-page root was absent or unusable; rendered document body -->\n\n")
 	}
-	state := renderState{excluded: nodeSet(excluded)}
+	if samplesAnchor != nil && !isDescendantOf(samplesAnchor, root) {
+		samplesAnchor = nil
+	}
+	state := renderState{excluded: nodeSet(excluded), anchor: samplesAnchor, samples: samples}
 	builder.WriteString(renderNode(root, state))
-	for index, sample := range samples {
+	if state.anchor == nil {
+		builder.WriteString(renderSampleSection(state))
+	}
+	return BuildMarkdown(normalizeMarkdown(builder.String()))
+}
+
+func isDescendantOf(node, ancestor *nethtml.Node) bool {
+	for current := node; current != nil; current = current.Parent {
+		if current == ancestor {
+			return true
+		}
+	}
+	return false
+}
+
+func renderSampleSection(state renderState) string {
+	var builder strings.Builder
+	for index, sample := range state.samples {
 		builder.WriteString("\n\n### Sample ")
 		builder.WriteString(fmt.Sprint(index + 1))
 		builder.WriteString("\n\nInput\n\n")
@@ -318,11 +379,13 @@ func RenderMarkdown(title, sourceURL string, capturedAt string, root *nethtml.No
 			builder.WriteString(renderNode(sample.Explanation, state))
 		}
 	}
-	return BuildMarkdown(normalizeMarkdown(builder.String()))
+	return builder.String()
 }
 
 type renderState struct {
 	excluded  map[*nethtml.Node]bool
+	anchor    *nethtml.Node
+	samples   []Sample
 	listDepth int
 }
 
@@ -335,7 +398,13 @@ func nodeSet(nodes []*nethtml.Node) map[*nethtml.Node]bool {
 }
 
 func renderNode(node *nethtml.Node, state renderState) string {
-	if node == nil || state.excluded[node] {
+	if node == nil {
+		return ""
+	}
+	if node == state.anchor {
+		return renderSampleSection(state)
+	}
+	if state.excluded[node] {
 		return ""
 	}
 	switch node.Type {
@@ -403,15 +472,132 @@ func renderNode(node *nethtml.Node, state renderState) string {
 		}
 		return escapeMarkdownText(alt)
 	case "table":
-		return "\n\n" + serializeHTML(node) + "\n\n"
+		return renderTable(node, state)
 	case "math", "svg":
 		return serializeHTML(node)
+	case "span":
+		// MathJax renders pages that are not server-rendered as MathML into nested
+		// spans. Recover the sub/superscript structure that plain text flattening drops.
+		switch {
+		case HasClass(node, "mjx-sub"):
+			return "_{" + strings.TrimSpace(renderChildren(node, state)) + "}"
+		case HasClass(node, "mjx-sup"):
+			return "^{" + strings.TrimSpace(renderChildren(node, state)) + "}"
+		}
+		return renderChildren(node, state)
 	case "details":
 		return "\n\n" + renderChildren(node, state) + "\n\n"
 	case "summary":
 		return "\n\n" + strings.TrimSpace(renderInlineChildren(node, state)) + "\n\n"
 	}
 	return renderChildren(node, state)
+}
+
+// renderTable emits a Markdown table for simple structures and preserves the
+// exact subtree as HTML whenever a conversion would lose cells or formatting.
+func renderTable(node *nethtml.Node, state renderState) string {
+	if markdown, ok := markdownTable(node, state); ok {
+		return "\n\n" + markdown + "\n\n"
+	}
+	return "\n\n" + serializeHTML(node) + "\n\n"
+}
+
+var tableBlockTags = map[string]bool{
+	"p": true, "div": true, "pre": true, "table": true, "ul": true, "ol": true,
+	"blockquote": true, "details": true, "hr": true, "figure": true, "center": true, "form": true,
+}
+
+func markdownTable(node *nethtml.Node, state renderState) (string, bool) {
+	rows := tableRows(node)
+	if len(rows) < 2 {
+		return "", false
+	}
+	header := directCells(rows[0])
+	if len(header) == 0 {
+		return "", false
+	}
+	width := len(header)
+	var lines []string
+	for index, row := range rows {
+		cells := directCells(row)
+		if len(cells) == 0 {
+			return "", false
+		}
+		values := make([]string, 0, len(cells))
+		empty := true
+		for _, cell := range cells {
+			if index == 0 && cell.Data != "th" {
+				return "", false
+			}
+			if hasAttribute(cell, "colspan") || hasAttribute(cell, "rowspan") || !convertibleTableCell(cell) {
+				return "", false
+			}
+			value := renderInlineChildren(cell, state)
+			if strings.ContainsAny(value, "|\n") {
+				return "", false
+			}
+			if value != "" {
+				empty = false
+			}
+			values = append(values, value)
+		}
+		// Sources insert narrower content-free rows as visual separators; dropping
+		// them removes no cells, while any other width mismatch keeps the HTML table.
+		if len(cells) != width {
+			if empty {
+				continue
+			}
+			return "", false
+		}
+		lines = append(lines, "| "+strings.Join(values, " | ")+" |")
+		if index == 0 {
+			separators := make([]string, width)
+			for position := range separators {
+				separators[position] = "---"
+			}
+			lines = append(lines, "| "+strings.Join(separators, " | ")+" |")
+		}
+	}
+	return strings.Join(lines, "\n"), true
+}
+
+func tableRows(node *nethtml.Node) []*nethtml.Node {
+	var rows []*nethtml.Node
+	for child := node.FirstChild; child != nil; child = child.NextSibling {
+		if child.Type != nethtml.ElementNode {
+			continue
+		}
+		switch strings.ToLower(child.Data) {
+		case "tr":
+			rows = append(rows, child)
+		case "thead", "tbody", "tfoot":
+			for section := child.FirstChild; section != nil; section = section.NextSibling {
+				if section.Type == nethtml.ElementNode && strings.ToLower(section.Data) == "tr" {
+					rows = append(rows, section)
+				}
+			}
+		}
+	}
+	return rows
+}
+
+func convertibleTableCell(cell *nethtml.Node) bool {
+	convertible := true
+	Walk(cell, func(node *nethtml.Node) bool {
+		if !convertible || node == cell || node.Type != nethtml.ElementNode {
+			return !convertible
+		}
+		if tableBlockTags[strings.ToLower(node.Data)] {
+			convertible = false
+		}
+		return convertible
+	})
+	return convertible
+}
+
+func hasAttribute(node *nethtml.Node, key string) bool {
+	_, ok := Attribute(node, key)
+	return ok
 }
 
 func renderChildren(node *nethtml.Node, state renderState) string {
@@ -554,7 +740,7 @@ func cloneSafeHTML(node *nethtml.Node) *nethtml.Node {
 		return nil
 	}
 	tag := strings.ToLower(node.Data)
-	if tag == "script" || tag == "style" || tag == "noscript" || tag == "iframe" || tag == "svg" {
+	if tag == "script" || tag == "style" || tag == "noscript" || tag == "iframe" {
 		return nil
 	}
 	safe := &nethtml.Node{Type: nethtml.ElementNode, Data: node.Data}

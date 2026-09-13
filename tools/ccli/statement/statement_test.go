@@ -44,12 +44,35 @@ func TestDecodeAndParseTaskPage(t *testing.T) {
 	if len(result.Metadata.Samples) != 3 || result.Metadata.Samples[0].Input != "8 17\n2 7 1 8 2 4 5 1\n" {
 		t.Fatalf("unexpected samples: %#v", result.Metadata.Samples)
 	}
-	for _, wanted := range []string{"## Description", "## Constraints", "### Sample 1", "```text\n4 1 4\n```", "smallest left endpoint", "<math>", "<table class=\"details\">", "Optional hint"} {
+	for _, wanted := range []string{"## Description", "## Constraints", "### Sample 1", "```text\n4 1 4\n```", "smallest left endpoint", "<math>", "Optional hint"} {
 		if !strings.Contains(result.Markdown, wanted) {
 			t.Errorf("Markdown missing %q:\n%s", wanted, result.Markdown)
 		}
 	}
-	for _, unwanted := range []string{"M17 — Lantern Network\n\n## Lantern Network", "this content must not appear", "class=\"samples\"", "Run samples"} {
+	for _, wanted := range []string{
+		"| Situation | Required behavior |",
+		"| Multiple segments have the same length | Choose the smallest left endpoint |",
+		"| A segment reaches the threshold exactly | It is valid |",
+	} {
+		if !strings.Contains(result.Markdown, wanted) {
+			t.Errorf("Markdown missing converted table row %q:\n%s", wanted, result.Markdown)
+		}
+	}
+	for _, wanted := range []string{
+		"has the smallest left endpoint.",
+		"![The window never reaches the threshold](https://example.invalid/figures/lantern-threshold.png)",
+		"No segment of length 1 or 2 is sufficient.",
+		"2×10^{5}",
+		"R_{S}",
+	} {
+		if !strings.Contains(result.Markdown, wanted) {
+			t.Errorf("Markdown lost explanation or inline content %q:\n%s", wanted, result.Markdown)
+		}
+	}
+	if samples, scoring := strings.Index(result.Markdown, "### Sample 1"), strings.Index(result.Markdown, "## Scoring"); samples < 0 || scoring < 0 || samples > scoring {
+		t.Errorf("sample section must render at the sample table position, before later sections:\n%s", result.Markdown)
+	}
+	for _, unwanted := range []string{"M17 — Lantern Network\n\n## Lantern Network", "this content must not appear", "class=\"samples\"", "Run samples", "\nExplanation\n"} {
 		if strings.Contains(result.Markdown, unwanted) {
 			t.Errorf("Markdown contains excluded content %q:\n%s", unwanted, result.Markdown)
 		}
@@ -118,7 +141,7 @@ func TestStorePreservesRawAndCollisions(t *testing.T) {
 }
 
 func TestRendererStripsActiveContent(t *testing.T) {
-	htmlBytes := `<html><body><div class="task-info"><div class="task-displayid">SEC</div><span>Time limit: 1.000 s</span><span>Memory limit: 256 MB</span></div><div class="task"><p>before&#27;[31mred&#27;[0m after</p><p><a href="javascript:alert(1)">bad link</a></p><p><a href="https://example.invalid/ok">good link</a></p><svg onload="alert(1)"></svg></div></body></html>`
+	htmlBytes := `<html><body><div class="task-info"><div class="task-displayid">SEC</div><span>Time limit: 1.000 s</span><span>Memory limit: 256 MB</span></div><div class="task"><p>before&#27;[31mred&#27;[0m after</p><p><a href="javascript:alert(1)">bad link</a></p><p><a href="https://example.invalid/ok">good link</a></p><svg onload="alert(1)"><text>diagram label</text><script>alert(1)</script></svg></div></body></html>`
 	body := []byte(`{"type":"statement-html","version":1,"capturedAt":"2026-09-13T00:00:00Z","title":"Security","url":"https://example.invalid/security","html":` + mustJSON(htmlBytes) + `}`)
 	capture, err := statement.DecodeCapture(body)
 	if err != nil {
@@ -139,6 +162,9 @@ func TestRendererStripsActiveContent(t *testing.T) {
 	}
 	if !strings.Contains(result.Markdown, "https://example.invalid/ok") {
 		t.Fatalf("Markdown dropped a safe link:\n%s", result.Markdown)
+	}
+	if !strings.Contains(result.Markdown, "diagram label") {
+		t.Fatalf("Markdown dropped preserved diagram content:\n%s", result.Markdown)
 	}
 }
 

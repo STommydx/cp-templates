@@ -23,13 +23,16 @@ type Adapter interface {
 
 // Extraction is the adapter-to-renderer and adapter-to-metadata handoff.
 // Root points into the request-local DOM and Excluded contains exact subtrees
-// already represented by structured values such as Samples.
+// already represented by structured values such as Samples. SamplesAnchor is
+// the subtree that Samples replaces in place; it must also appear in Excluded,
+// and a nil anchor appends the rendered samples after Root.
 type Extraction struct {
-	Root     *html.Node
-	Samples  []Sample
-	Metadata ProblemMetadata
-	Excluded []*html.Node
-	Warnings []string
+	Root          *html.Node
+	Samples       []Sample
+	SamplesAnchor *html.Node
+	Metadata      ProblemMetadata
+	Excluded      []*html.Node
+	Warnings      []string
 }
 
 // Sample is one ordered input/output example from a source page.

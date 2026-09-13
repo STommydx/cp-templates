@@ -59,20 +59,24 @@ sum(a[left..right]) &gt;= S</pre>
   </table>
   <blockquote>The brightness values are always positive. This property is important when reasoning about how the left endpoint can move.</blockquote>
   <details><summary>Optional hint</summary><p>Consider maintaining a window whose total brightness is at least <math><mi>S</mi></math>. Whenever the window is valid, try removing posts from its left side while preserving validity.</p></details>
+  <p>For every subtask, the number of posts is at most <span class="mjx-chtml"><span class="mjx-math"><span class="mjx-mrow"><span class="mjx-mn"><span class="mjx-char">2</span></span><span class="mjx-mo"><span class="mjx-char">×</span></span><span class="mjx-msubsup"><span class="mjx-base"><span class="mjx-mn"><span class="mjx-char">10</span></span></span><span class="mjx-sup"><span class="mjx-mi"><span class="mjx-char">5</span></span></span></span></span></span></span> and the starting post is <span class="mjx-chtml"><span class="mjx-math"><span class="mjx-mrow"><span class="mjx-msubsup"><span class="mjx-base"><span class="mjx-mi"><span class="mjx-char">R</span></span></span><span class="mjx-sub"><span class="mjx-mi"><span class="mjx-char">S</span></span></span></span></span></span></span>.</p>
 
   <div class="samples-wrapper">
     <table class="samples"><thead><tr><th>#</th><th>Input</th><th>Output</th></tr></thead><tbody>
       <tr class="sample"><td>1</td><td class="io" data-raw="OCAxNwoyIDcgMSA4IDIgNCA1IDEK"><pre>ignored by data-raw</pre></td><td class="io"><pre>4 1 4</pre></td></tr>
-      <tr class="explanation"><td colspan="3">The segment [1,4] has brightness 2 + 7 + 1 + 8 = 18 and has length 4. Other valid segments of length 4 exist, but this one has the smallest left endpoint.</td></tr>
+      <tr class="sample"><td>Explanation</td><td class="explanation">The segment [1,4] has brightness 2 + 7 + 1 + 8 = 18 and has length 4. Other valid segments of length 4 exist, but this one has the smallest left endpoint.</td></tr>
       <tr class="sample"><td>2</td><td class="io"><pre>5 20
 3 1 4 2 6</pre></td><td class="io"><pre>-1 -1</pre></td></tr>
-      <tr class="explanation"><td colspan="3">The total brightness of all posts is smaller than 20.</td></tr>
+      <tr class="sample"><td>Explanation</td><td class="explanation"><img src="https://example.invalid/figures/lantern-threshold.png" alt="The window never reaches the threshold"></td></tr>
       <tr class="sample"><td>3</td><td class="io"><pre>6 9
 4 1 2 6 1 3</pre></td><td class="io"><pre>3 2 4</pre></td></tr>
       <tr class="explanation"><td colspan="3">The chosen segment is [2,4] and has brightness 1 + 2 + 6 = 9. No segment of length 1 or 2 is sufficient.</td></tr>
       <tr class="run-control"><td colspan="3"><button type="button">Run samples</button></td></tr>
     </tbody></table>
   </div>
+
+  <h2>Scoring</h2>
+  <p>Subtasks are scored independently, and the total score is the sum of the subtask scores.</p>
 </div>
 <script>this content must not appear</script>
 </body>

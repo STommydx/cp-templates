@@ -88,7 +88,7 @@ func parseWithAdapter(capture *CaptureEnvelope, document *nethtml.Node, adapter 
 	}
 	metadata.Samples = extraction.Samples
 	metadata.Warnings = append([]string(nil), extraction.Warnings...)
-	markdown, err := RenderMarkdown(metadata.Identity.Title, capture.URL, capture.CapturedAt, extraction.Root, extraction.Excluded, extraction.Samples, false)
+	markdown, err := RenderMarkdown(metadata.Identity.Title, capture.URL, capture.CapturedAt, extraction.Root, extraction.SamplesAnchor, extraction.Excluded, extraction.Samples, false)
 	if err != nil {
 		return ParseResult{}, err
 	}
@@ -113,7 +113,7 @@ func fallbackResult(capture *CaptureEnvelope, document *nethtml.Node, reason str
 	if root == nil {
 		root = document
 	}
-	markdown, err := RenderMarkdown(capture.Title, capture.URL, capture.CapturedAt, root, nil, nil, true)
+	markdown, err := RenderMarkdown(capture.Title, capture.URL, capture.CapturedAt, root, nil, nil, nil, true)
 	if err != nil {
 		return ParseResult{}, err
 	}
