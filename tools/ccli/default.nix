@@ -9,4 +9,5 @@ buildGoApplication {
   src = ./.;
   pwd = ./.;
   modules = ./gomod2nix.toml;
+  nativeCheckInputs = [ pkgs.gcc ];
 }

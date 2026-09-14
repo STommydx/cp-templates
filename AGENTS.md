@@ -40,6 +40,7 @@ The main template areas are:
   repository formatter.
 - `build/`, `result`, and CMake-generated files are build artifacts and should
   not be committed.
+- `WRITING.md` defines prose, comment, README, commit, and pull request conventions for this submodule.
 
 ## C++ Development
 
@@ -57,6 +58,12 @@ The main template areas are:
   than relying on transitive includes.
 - Format C++ with the repository `.clang-format`: LLVM-based style, four-space
   indentation, and tabs used for indentation.
+
+### Documentation and comments
+
+Follow [`WRITING.md`](WRITING.md). Package contracts and rationale belong in
+the relevant README. Source comments cover non-obvious invariants,
+constraints, ordering requirements, and workarounds.
 
 ### Tests
 
@@ -76,19 +83,17 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-The CMake build fetches Catch2 3.8.1 and enables AddressSanitizer and
-UndefinedBehaviorSanitizer for the test executable.
 
-## ccli Development
+## ccli development
 
 `tools/ccli` is a Go module. Its main areas are:
 
-- `cmd/`: Cobra command definitions (`init`, `add`, `pack`, `compile`, and
-  `run`).
+- `cmd/`: Cobra command definitions for source, statement, and inventory workflows.
+- `statement/`: capture validation, judge adapters, DOM rendering, metadata, storage, and inventory.
 - `repoinit/`: project initialization and template copying.
 - `submission/`: source packing, compilation, and execution.
 - `output/`: terminal and test output handling.
-- `spinner/`: terminal progress support.
+- `spinner/`: spinner support.
 
 Run CLI checks from `tools/ccli`:
 
@@ -97,18 +102,9 @@ go build -v ./...
 go test -v ./...
 ```
 
-The module declares Go 1.26. Keep generated or vendored dependency data out of
-source changes unless the dependency set is intentionally changed.
+The module declares Go 1.26. Keep generated or vendored dependency data out of source changes unless the dependency set is intentionally changed.
 
-For a local user workflow, the CLI supports:
-
-```bash
-ccli init project-name
-ccli run A.cpp
-```
-
-Manual `#include` use of the root templates remains supported.
-
+The source workflow supports `ccli init project-name` and `ccli run A.cpp`. The statement workflow supports `ccli statement serve`, `list`, `path`, and `show`. Manual `#include` use of the root templates remains supported.
 ## Formatting and Validation
 
 - `.pre-commit-config.yaml` runs `clang-format` and the end-of-file fixer.

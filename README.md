@@ -1,24 +1,24 @@
-# Competitive Programming Templates
+# Competitive programming templates
 
-Welcome to my Competitive Programming Templates repository. Here, you'll find a collection of commonly used templates for competitive programming. These templates are meticulously crafted in C++20, utilizing modern C++ practices to ensure efficiency and clarity. They aim to be as generic as possible to fit all use cases. Unlike many other template repositories, we go the extra mile by incorporating unit tests, guaranteeing the correctness and reliability of each template. Additionally, a convenient tool is provided to compile and pack your source code into a single file for submission.
+This repository provides reusable C++20 templates, tests, and the `ccli` tool. The templates are header-only and use the standard library unless a repository component requires another dependency.
 
-## Included Templates
+## Included templates
 
-### Data Structures
+### Data structures
 
 - [Disjoint Set Union](dsu.hpp)
 - [Fenwick Tree](fenwick.hpp)
 - [Prefix Sum](utilities.hpp)
 - [Segment Tree](segment_tree.hpp)
 - [Segment Tree with Lazy Propagation](segment_tree.hpp)
-- [Segment Tree (Dynamic version)](classic_segment_tree.hpp)
+- [Dynamic Segment Tree](classic_segment_tree.hpp)
 - [Sparse Table](sparse_table.hpp)
 
-### Flow Networks
+### Flow networks
 
 - [Dinic's Algorithm](flow.hpp)
 - [Primal Dual Algorithm](flow.hpp)
-- [Sucessive Shortest Path](flow.hpp)
+- [Successive Shortest Path](flow.hpp)
 
 ### Geometry
 
@@ -33,7 +33,7 @@ Welcome to my Competitive Programming Templates repository. Here, you'll find a 
 - [LCA](lca.hpp)
 - [SPFA](graph.hpp)
 
-### String Algorithms
+### String algorithms
 
 - [Aho-Corasick Algorithm](string.hpp)
 - [KMP](string.hpp)
@@ -50,13 +50,15 @@ Welcome to my Competitive Programming Templates repository. Here, you'll find a 
 - [Coordinate Compression](coordinate_compression.hpp)
 - [Modular Arithmetic](modint.hpp)
 
-## Getting Started
+## Tools
 
-### Method A: ccli
+- [`ccli`](tools/ccli/README.md) manages source files, compiles solutions, packs templates, and serves captured problem statements.
+- [PageMole](tools/pagemole/README.md) captures rendered page HTML for the local `ccli` receiver.
+- [Writing conventions](WRITING.md) define documentation, comment, commit, and pull request style.
 
-For your convenience, leverage our [ccli](tools/ccli/README.md) tool to seamlessly compile and pack your source code into a single file. Simply include the desired templates using the #include directive in your source code, and let ccli handle the rest. Refer to the README in [tools/ccli](tools/ccli/README.md) for comprehensive instructions.
+## Use ccli
 
-To obtain ccli, you may either download it directly from the release page or install it via the following command:
+Install `ccli` from this directory:
 
 ```bash
 git clone https://github.com/STommydx/cp-templates.git
@@ -64,34 +66,46 @@ cd cp-templates/tools/ccli
 go install .
 ```
 
-Once installed, kickstart your project with the following command:
+Initialize a project:
 
 ```bash
 ccli init project-name
 ```
 
-Replace `project-name` with your desired project folder name, such as `atcoder-abc-123` for instance. This command will create the specified folder and populate it with all necessary templates within a templates subfolder. Then, simply include templates using `#include` directives in your source code, like so: `#include "templates/fenwick.hpp"`.
+The command creates starter source files and a `templates` directory. Include a template with a normal C++ include:
 
-Additionally, running the following command will automatically copy all templates to A.cpp, compile it, and execute it. The merged source code will be available in the submissions folder `submissions/A.cpp`.
+```cpp
+#include "templates/fenwick.hpp"
+```
+
+Run a solution:
 
 ```bash
 ccli run A.cpp
 ```
 
-### Method B: Manual copy and paste
+The command packs the included templates, compiles the solution, runs it, and writes the packed source under `submissions/`.
 
-If you prefer not to use ccli, you can manually copy and paste the templates into your source code. Rest assured, all templates are encapsulated within `#ifndef` directives to prevent duplicate inclusion.
-
-## Contributing
-
-Your contributions are greatly appreciated! If you have any suggestions or encounter any bugs, please feel free to open an issue or pull request. We are committed to promptly addressing these concerns, and we hope these templates prove invaluable to your endeavors.
-
-This repository utilizes the CMake build system. To build and test the templates, follow the commands outlined below:
+Capture and inspect a problem statement:
 
 ```bash
-mkdir build
-cd build
-cmake ..
-make
-ctest --output-on-failure
+ccli statement serve
+ccli statement list --format table
+ccli statement show hkoi/UDEV
+```
+
+Read [the `ccli` README](tools/ccli/README.md) for the storage and API contracts.
+
+## Copy templates manually
+
+You can copy templates into a solution when `ccli` is not available. Each header has include guards that prevent duplicate inclusion.
+
+## Build and test
+
+From the repository root:
+
+```bash
+cmake -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
 ```
